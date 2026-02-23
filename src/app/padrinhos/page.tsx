@@ -92,10 +92,10 @@ export default function ManualPadrinhosPage() {
         </Button>
       </div>
 
-      <div className="max-w-3xl mx-auto px-6 py-24 space-y-32">
+      <div className="max-w-3xl mx-auto px-6 py-12 md:py-20 space-y-16 md:space-y-24">
         
         {/* Section 1: Capa */}
-        <section className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-12 animate-in fade-in duration-1000">
+        <section className="min-h-[40vh] md:min-h-[50vh] flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in duration-1000">
           <div className="space-y-4">
             <p className="text-xs tracking-[0.5em] uppercase text-muted-foreground/60 font-light">Especialmente para vocês</p>
             <h1 className="text-5xl md:text-7xl font-headline text-gold leading-tight">
