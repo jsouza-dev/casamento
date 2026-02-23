@@ -15,15 +15,17 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
   const [isReady, setIsReady] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const playerRef = useRef<any>(null);
+  const containerId = 'youtube-player-container';
 
   useEffect(() => {
     setIsMounted(true);
 
+    // Function to initialize the YouTube player
     const initPlayer = () => {
-      if (playerRef.current) return;
+      if (playerRef.current || !window.YT || !window.YT.Player) return;
       
       try {
-        playerRef.current = new (window as any).YT.Player('youtube-player', {
+        playerRef.current = new window.YT.Player(containerId, {
           height: '0',
           width: '0',
           videoId: 'IQavyVVJmvo',
@@ -34,11 +36,23 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
             controls: 0,
             showinfo: 0,
             modestbranding: 1,
+            origin: typeof window !== 'undefined' ? window.location.origin : '',
           },
           events: {
             onReady: (event: any) => {
               event.target.setVolume(40);
               setIsReady(true);
+              // If already open when ready, try to play
+              if (playOnOpen) {
+                event.target.playVideo();
+                setIsPlaying(true);
+              }
+            },
+            onStateChange: (event: any) => {
+              // Handle loop manually if needed, though playlist param should cover it
+              if (event.data === window.YT.PlayerState.ENDED) {
+                event.target.playVideo();
+              }
             },
             onError: (e: any) => {
               console.error("YouTube Player Error:", e);
@@ -50,38 +64,44 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
       }
     };
 
-    if (typeof document !== 'undefined' && !document.getElementById('youtube-api-script')) {
+    // Load YouTube API script
+    if (!document.getElementById('youtube-api-script')) {
       const tag = document.createElement('script');
       tag.id = 'youtube-api-script';
       tag.src = "https://www.youtube.com/iframe_api";
-      document.head.appendChild(tag);
-    }
-
-    if (typeof window !== 'undefined') {
-      if ((window as any).YT && (window as any).YT.Player) {
-        initPlayer();
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      if (firstScriptTag && firstScriptTag.parentNode) {
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
       } else {
-        (window as any).onYouTubeIframeAPIReady = initPlayer;
+        document.head.appendChild(tag);
       }
     }
+
+    // Set global callback
+    if (!(window as any).onYouTubeIframeAPIReady) {
+      (window as any).onYouTubeIframeAPIReady = initPlayer;
+    } else if ((window as any).YT && (window as any).YT.Player) {
+      initPlayer();
+    }
+
+    return () => {
+      // Clean up if necessary
+    };
   }, []);
 
+  // React to playOnOpen changes
   useEffect(() => {
     if (isReady && playerRef.current) {
-      if (playOnOpen) {
-        try {
+      try {
+        if (playOnOpen) {
           playerRef.current.playVideo();
           setIsPlaying(true);
-        } catch (e) {
-          console.error("Auto-play failed:", e);
-        }
-      } else {
-        try {
+        } else {
           playerRef.current.pauseVideo();
           setIsPlaying(false);
-        } catch (e) {
-          // Silently handle pause error
         }
+      } catch (e) {
+        console.error("Player interaction failed:", e);
       }
     }
   }, [playOnOpen, isReady]);
@@ -90,12 +110,14 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
     if (!playerRef.current || !isReady) return;
     
     try {
-      if (isPlaying) {
+      const state = playerRef.current.getPlayerState();
+      if (state === 1) { // Playing
         playerRef.current.pauseVideo();
+        setIsPlaying(false);
       } else {
         playerRef.current.playVideo();
+        setIsPlaying(true);
       }
-      setIsPlaying(!isPlaying);
     } catch (e) {
       console.error("Toggle music error:", e);
     }
@@ -106,19 +128,27 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
   return (
     <>
       <div className="hidden" aria-hidden="true">
-        <div id="youtube-player" />
+        <div id={containerId} />
       </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleMusic}
-        className={cn(
-          "fixed bottom-6 right-6 z-50 rounded-full bg-white/50 backdrop-blur-sm border border-primary/20 text-primary shadow-sm transition-all hover:scale-110",
-          !playOnOpen && "opacity-0 pointer-events-none"
-        )}
-      >
-        {isPlaying ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
-      </Button>
+      {playOnOpen && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleMusic}
+          className={cn(
+            "fixed bottom-6 right-6 z-50 rounded-full bg-white/50 backdrop-blur-sm border border-primary/20 text-primary shadow-sm transition-all hover:scale-110 animate-in fade-in zoom-in duration-500"
+          )}
+        >
+          {isPlaying ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+        </Button>
+      )}
     </>
   );
+}
+
+declare global {
+  interface Window {
+    YT: any;
+    onYouTubeIframeAPIReady: () => void;
+  }
 }
