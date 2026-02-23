@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Gift": {
@@ -113,6 +114,10 @@
         "category": {
           "type": "string",
           "description": "Category of the guest (e.g., Family, Friends, Work)."
+        },
+        "guestLimit": {
+          "type": "number",
+          "description": "Total number of people allowed for this invitation (including the main guest)."
         },
         "createdAt": {
           "type": "string",

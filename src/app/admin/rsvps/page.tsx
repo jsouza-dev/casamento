@@ -96,6 +96,13 @@ export default function RSVPsPage() {
           lowerKey === 'tipo'
         ) {
           data.category = value;
+        } else if (
+          lowerKey === 'total de pessoas' || 
+          lowerKey === 'total' || 
+          lowerKey === 'limite' ||
+          lowerKey === 'pessoas'
+        ) {
+          data.guestLimit = parseInt(value) || 1;
         }
       });
 
@@ -200,7 +207,7 @@ export default function RSVPsPage() {
     const isRsvpList = title.includes("Confirmações");
     const tableColumn = isRsvpList 
       ? ["Nome", "Presença", "Acomp.", "Telefone", "Data"]
-      : ["Nome", "Status", "Telefone", "Categoria"];
+      : ["Nome", "Status", "Lím.", "Categoria"];
 
     const tableRows = data.map(item => {
       if (isRsvpList) {
@@ -221,7 +228,7 @@ export default function RSVPsPage() {
       return [
         item.fullName,
         status,
-        item.phoneNumber || "---",
+        item.guestLimit || "---",
         item.category || "Geral"
       ];
     });
@@ -396,7 +403,7 @@ export default function RSVPsPage() {
                     <TableRow>
                       <TableHead>Nome</TableHead>
                       <TableHead>Status RSVP</TableHead>
-                      <TableHead>Telefone</TableHead>
+                      <TableHead>Lím. Pessoas</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -419,7 +426,7 @@ export default function RSVPsPage() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>{item.phoneNumber || '---'}</TableCell>
+                          <TableCell>{item.guestLimit || '---'}</TableCell>
                           <TableCell><span className="text-xs text-muted-foreground bg-neutral-100 px-2 py-1 rounded">{item.category || 'Geral'}</span></TableCell>
                           <TableCell>
                             <DropdownMenu>
