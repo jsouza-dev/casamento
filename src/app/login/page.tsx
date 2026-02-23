@@ -8,10 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Heart, Loader2, ArrowLeft, Info } from 'lucide-react';
+import { Heart, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState('');
@@ -77,13 +76,6 @@ export default function LoginPage() {
             <CardDescription>Use suas credenciais administrativas</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Alert className="bg-primary/5 border-primary/10 text-primary/80">
-              <Info className="h-4 w-4" />
-              <AlertDescription className="text-xs">
-                Utilize <strong>admin</strong> e <strong>admin123</strong> para acessar.
-              </AlertDescription>
-            </Alert>
-
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="identifier">Usuário ou E-mail</Label>
