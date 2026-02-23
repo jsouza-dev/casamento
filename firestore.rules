@@ -10,22 +10,6 @@ service cloud.firestore {
      * 1. Public/Guest Access: Allows viewing of the gift registry and event details, and the ability to submit RSVPs.
      * 2. Administrative Access: Managed via a dedicated 'roles_admin' collection. Admins have full control
      *    over the gift registry and event configurations, and can manage guest RSVPs.
-     *
-     * Data Structure:
-     * - /gifts/{giftId}: Publicly viewable gift registry.
-     * - /rsvps/{rsvpId}: Guest attendance submissions.
-     * - /event_settings/main_settings: Global configuration singleton.
-     * - /roles_admin/{adminId}: Admin authorization mapping (DBAC).
-     *
-     * Key Security Decisions:
-     * - Global Admin Role: Authorization for sensitive operations (writing gifts, reading RSVPs) 
-     *   is determined by the existence of a document in the /roles_admin collection matching the user's UID.
-     * - RSVP Privacy: Guests can submit their own RSVP but are strictly forbidden from reading or 
-     *   listing RSVPs from other guests to ensure privacy.
-     * - Public Read-Only: Essential event information is globally readable to ensure guests can 
-     *   access the site without authentication.
-     * - Prototyping Flexibility: Rules prioritize authorization (WHO can access) over strict 
-     *   schema validation (WHAT the data looks like) to facilitate rapid feature development.
      */
 
     // --- Global Helper Functions ---
@@ -38,11 +22,17 @@ service cloud.firestore {
     }
 
     /**
-     * @description Checks if the authenticated user has administrative privileges 
-     * by looking up their UID in the roles_admin collection.
+     * @description Checks if the authenticated user has administrative privileges.
+     * Durante o prototipagem, incluímos permissões explícitas para o UID reportado
+     * e o e-mail administrativo padrão.
      */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
+        request.auth.uid == "X8JMY0mx3gdmjFLZ8mnkWBK5bvH2" ||
+        request.auth.token.email == "admin@casamento.com" ||
+        request.auth.token.email == "jviitor2628@gmail.com"
+      );
     }
 
     /**
@@ -56,10 +46,6 @@ service cloud.firestore {
 
     /**
      * @description Manages the wedding gift registry. Publicly readable by guests, manageable by admins.
-     * @path /gifts/{giftId}
-     * @allow (list) Any user viewing the registry page.
-     * @deny (update) A guest trying to change the price of a gift.
-     * @principle Public Read with Admin-Only Writes.
      */
     match /gifts/{giftId} {
       allow get, list: if true;
@@ -70,40 +56,30 @@ service cloud.firestore {
 
     /**
      * @description Captures guest attendance. Guests can submit RSVPs; only admins can view or manage them.
-     * @path /rsvps/{rsvpId}
-     * @allow (create) A guest submitting their attendance confirmation.
-     * @deny (list) A guest trying to see the list of other invited people.
-     * @principle Path-based creation for guests with Admin-only management.
      */
     match /rsvps/{rsvpId} {
       allow create: if request.resource.data.id == rsvpId;
       allow get, list, delete: if isAdmin();
-      allow update: if false; // Per IR: Guests cannot update; Admins manage via list/delete.
+      allow update: if isAdmin(); // Permite que admins atualizem se necessário
     }
 
     /**
      * @description Stores global event settings (singleton). Publicly readable; Admin editable.
-     * @path /event_settings/main_settings
-     * @allow (get) The landing page fetching the bride and groom's names.
-     * @deny (create) Any attempt to create a second settings document.
-     * @principle Singleton configuration with public read and restricted admin updates.
      */
     match /event_settings/main_settings {
       allow get, list: if true;
       allow update: if isAdmin() && resource != null;
-      allow create, delete: if false; // Settings document should be pre-seeded.
+      allow create: if isAdmin();
+      allow delete: if false;
     }
 
     /**
      * @description Database Access Control (DBAC) collection for admin identification.
-     * @path /roles_admin/{adminId}
-     * @allow (get) An admin user verifying their own administrative status.
-     * @deny (list) Anyone trying to see the full list of site administrators.
-     * @principle Global Role-Based Access Control (RBAC) source of truth.
      */
     match /roles_admin/{adminId} {
-      allow get: if isSelfAdmin(adminId);
-      allow list, create, update, delete: if false; // Managed via administrative console or script.
+      allow get: if isSelfAdmin(adminId) || isAdmin();
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
   }
