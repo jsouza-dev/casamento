@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -19,6 +20,8 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { doc, collection } from 'firebase/firestore';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -36,6 +39,7 @@ type FormValues = z.infer<typeof formSchema>;
 export function RSVPForm() {
   const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
+  const db = useFirestore();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -75,9 +79,22 @@ export function RSVPForm() {
 
   async function onSubmit(values: FormValues) {
     try {
-      // Simulating database submission
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log('RSVP Submitted:', values);
+      const rsvpId = doc(collection(db, 'rsvps')).id;
+      const docRef = doc(db, 'rsvps', rsvpId);
+
+      const rsvpData = {
+        id: rsvpId,
+        fullName: values.name,
+        isAttending: values.attending === 'yes',
+        numberOfGuests: values.attending === 'yes' ? values.guestsCount : 0,
+        guestNames: values.attending === 'yes' ? (values.guestNames?.map(g => g.name) || []) : [],
+        phoneNumber: values.phone,
+        message: values.message || "",
+        createdAt: new Date().toISOString(),
+      };
+
+      setDocumentNonBlocking(docRef, rsvpData, { merge: true });
+      
       setSubmitted(true);
       toast({
         title: "Confirmação enviada!",

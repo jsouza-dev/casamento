@@ -8,16 +8,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Heart, Loader2, ArrowLeft } from 'lucide-react';
+import { Heart, Loader2, ArrowLeft, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
-  const { user } = useUser();
+  const { user, userError } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -27,18 +28,30 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
+  useEffect(() => {
+    if (userError) {
+      toast({
+        variant: "destructive",
+        title: "Erro de acesso",
+        description: "Verifique suas credenciais e tente novamente.",
+      });
+      setIsLoading(false);
+    }
+  }, [userError, toast]);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Using the non-blocking sign in pattern as recommended
+    // Transform shortcut "admin" to a valid email format
+    const email = identifier === 'admin' ? 'admin@casamento.com' : identifier;
+    
     initiateEmailSignIn(auth, email, password);
     
-    // We'll give it a moment to show loading state
-    // The redirect happens in the useEffect above when user state changes
+    // Safety timeout to reset loading if nothing happens
     setTimeout(() => {
       setIsLoading(false);
-    }, 2000);
+    }, 3000);
   };
 
   return (
@@ -63,16 +76,22 @@ export default function LoginPage() {
             <CardTitle className="text-lg">Entrar</CardTitle>
             <CardDescription>Use suas credenciais administrativas</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <Alert className="bg-primary/5 border-primary/10 text-primary/80">
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Utilize <strong>admin</strong> e <strong>admin123</strong> para acessar.
+              </AlertDescription>
+            </Alert>
+
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="identifier">Usuário ou E-mail</Label>
                 <Input 
-                  id="email" 
-                  type="email" 
-                  placeholder="seu@email.com" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="identifier" 
+                  placeholder="admin" 
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
                   required
                   className="border-primary/10"
                 />
