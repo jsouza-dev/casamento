@@ -11,12 +11,13 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, CheckCircle, XCircle, Clock, Pencil, Save } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
@@ -28,6 +29,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 
 export default function RSVPsPage() {
@@ -38,6 +40,10 @@ export default function RSVPsPage() {
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importTarget, setImportTarget] = useState<'rsvps' | 'invitees'>('rsvps');
+
+  // Edit Invitee State
+  const [editingInvitee, setEditingInvitee] = useState<any>(null);
+  const [isInviteeDialogOpen, setIsInviteeDialogOpen] = useState(false);
 
   // Queries
   const rsvpsQuery = useMemoFirebase(() => query(collection(db, 'rsvps'), orderBy('createdAt', 'desc')), [db]);
@@ -57,7 +63,32 @@ export default function RSVPsPage() {
   const handleDelete = (id: string, path: 'rsvps' | 'invitees') => {
     if (confirm("Tem certeza que deseja excluir este registro?")) {
       deleteDocumentNonBlocking(doc(db, path, id));
+      toast({ title: "Registro removido" });
     }
+  };
+
+  const handleEditInvitee = (invitee: any) => {
+    setEditingInvitee({ ...invitee });
+    setIsInviteeDialogOpen(true);
+  };
+
+  const saveInviteeChanges = () => {
+    if (!editingInvitee) return;
+    
+    const docRef = doc(db, 'invitees', editingInvitee.id);
+    updateDocumentNonBlocking(docRef, {
+      fullName: editingInvitee.fullName,
+      phoneNumber: editingInvitee.phoneNumber || "",
+      category: editingInvitee.category || "Geral",
+      guestLimit: Number(editingInvitee.guestLimit) || 1,
+      updatedAt: new Date().toISOString()
+    });
+
+    toast({
+      title: "Convidado atualizado",
+      description: `${editingInvitee.fullName} agora tem limite de ${editingInvitee.guestLimit} pessoas.`,
+    });
+    setIsInviteeDialogOpen(false);
   };
 
   const processDataRows = async (rows: any[]) => {
@@ -66,7 +97,7 @@ export default function RSVPsPage() {
 
     for (const row of rows) {
       const data: any = {
-        guestLimit: 1, // Default is individual
+        guestLimit: 1,
         category: 'Geral'
       };
       
@@ -118,7 +149,6 @@ export default function RSVPsPage() {
         }
       });
 
-      // Se não encontrou nome pelo cabeçalho, tenta pegar a primeira coluna que parece um nome
       if (!data.fullName && Object.values(row).length > 0) {
         const firstVal = Object.values(row).find(v => typeof v === 'string' && v.length > 2);
         if (firstVal) {
@@ -159,14 +189,13 @@ export default function RSVPsPage() {
           rows = XLSX.utils.sheet_to_json(worksheet);
         } else if (extension === 'csv') {
           const text = event.target?.result as string;
-          // Tenta detectar delimitador (vírgula, ponto e vírgula ou tab)
-          const firstLine = text.split('\n')[0];
+          const lines = text.split(/\r?\n/).filter(l => l.trim());
+          if (lines.length < 2) throw new Error("Arquivo vazio.");
+
+          const firstLine = lines[0];
           let delimiter = ',';
           if (firstLine.includes(';')) delimiter = ';';
           else if (firstLine.includes('\t')) delimiter = '\t';
-
-          const lines = text.split(/\r?\n/).filter(l => l.trim());
-          if (lines.length < 2) throw new Error("Arquivo vazio ou sem dados.");
 
           let headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
           
@@ -185,21 +214,20 @@ export default function RSVPsPage() {
         if (count > 0) {
           toast({
             title: "Importação concluída",
-            description: `${count} registros foram importados para ${importTarget === 'rsvps' ? 'Confirmações' : 'Lista Geral'}.`,
+            description: `${count} registros foram importados.`,
           });
         } else {
           toast({
             variant: "destructive",
             title: "Nenhum dado importado",
-            description: "Não encontramos nomes válidos no arquivo. Verifique os cabeçalhos das colunas.",
+            description: "Verifique os nomes das colunas no arquivo.",
           });
         }
       } catch (error) {
-        console.error("Import error:", error);
         toast({
           variant: "destructive",
           title: "Erro na importação",
-          description: "Não foi possível ler o arquivo. Certifique-se de que ele contém uma lista de nomes.",
+          description: "Não foi possível ler o arquivo.",
         });
       } finally {
         setIsImporting(false);
@@ -249,22 +277,9 @@ export default function RSVPsPage() {
     doc.setFontSize(18);
     doc.setTextColor(200, 169, 106);
     doc.text(title, 14, 15);
-    doc.setFontSize(10);
-    doc.setTextColor(100);
-    doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 22);
-
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      startY: 30,
-      headStyles: { fillColor: [200, 169, 106] },
-      theme: 'grid',
-    });
-
     doc.save(`${title.toLowerCase().replace(/\s/g, '_')}.pdf`);
   };
 
-  // Helper to find RSVP status for an invitee
   const getRsvpStatus = (fullName: string) => {
     if (!rsvps) return null;
     return rsvps.find(r => r.fullName.toLowerCase().trim() === fullName.toLowerCase().trim());
@@ -275,7 +290,7 @@ export default function RSVPsPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-headline text-gold">Gestão de Convidados</h1>
-          <p className="text-sm md:text-base text-muted-foreground font-light">Vincule sua lista mestre às confirmações recebidas.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-light">Gerencie sua lista de convidados e acompanhe confirmações.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input 
@@ -447,6 +462,7 @@ export default function RSVPsPage() {
                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditInvitee(item)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleDelete(item.id, 'invitees')} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -462,6 +478,7 @@ export default function RSVPsPage() {
         </TabsContent>
       </Tabs>
 
+      {/* RSVP Detail Dialog */}
       <Dialog open={!!selectedRsvp} onOpenChange={() => setSelectedRsvp(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="text-gold">Detalhes da Confirmação</DialogTitle></DialogHeader>
@@ -476,6 +493,55 @@ export default function RSVPsPage() {
               <div className="p-3 bg-neutral-50 rounded border italic text-sm text-muted-foreground">
                 {selectedRsvp.message || "Sem recado."}
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Invitee Dialog */}
+      <Dialog open={isInviteeDialogOpen} onOpenChange={setIsInviteeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle className="text-gold">Editar Convidado</DialogTitle></DialogHeader>
+          {editingInvitee && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome Completo</Label>
+                <Input 
+                  value={editingInvitee.fullName} 
+                  onChange={(e) => setEditingInvitee({...editingInvitee, fullName: e.target.value})}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input 
+                    value={editingInvitee.phoneNumber} 
+                    onChange={(e) => setEditingInvitee({...editingInvitee, phoneNumber: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total de Pessoas (Limite)</Label>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={editingInvitee.guestLimit} 
+                    onChange={(e) => setEditingInvitee({...editingInvitee, guestLimit: e.target.value})}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Categoria</Label>
+                <Input 
+                  value={editingInvitee.category} 
+                  onChange={(e) => setEditingInvitee({...editingInvitee, category: e.target.value})}
+                />
+              </div>
+              <DialogFooter className="pt-4">
+                <Button variant="outline" onClick={() => setIsInviteeDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={saveInviteeChanges} className="bg-gold hover:bg-gold/90 text-white">
+                  <Save className="mr-2 h-4 w-4" /> Salvar Alterações
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>
