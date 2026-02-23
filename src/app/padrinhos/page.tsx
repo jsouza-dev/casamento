@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Monogram } from '@/components/Monogram';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
@@ -29,7 +30,7 @@ export default function ManualPadrinhosPage() {
 
   useEffect(() => {
     const savedAuth = sessionStorage.getItem('padrinhos_auth');
-    if (savedAuth === 'true' || !settings?.passwordEnabled) {
+    if (savedAuth === 'true' || (settings && !settings.passwordEnabled)) {
       setIsAuthenticated(true);
     }
   }, [settings]);
@@ -48,7 +49,7 @@ export default function ManualPadrinhosPage() {
   if (loadingSettings) {
     return (
       <div className="min-h-screen bg-[#F8F6F2] flex items-center justify-center">
-        <div className="animate-pulse font-headline text-gold text-xl italic">Carregando manual...</div>
+        <Loader2 className="animate-spin text-gold h-8 w-8" />
       </div>
     );
   }
@@ -86,8 +87,8 @@ export default function ManualPadrinhosPage() {
   return (
     <div className="min-h-screen bg-[#F8F6F2] selection:bg-primary/20">
       {/* Header Floating */}
-      <div className="fixed top-6 left-6 z-50">
-        <Button variant="ghost" size="sm" asChild className="text-gold hover:bg-gold/5 bg-white/50 backdrop-blur-sm rounded-full border border-primary/10">
+      <div className="fixed top-4 left-4 md:top-6 md:left-6 z-50">
+        <Button variant="ghost" size="sm" asChild className="text-gold hover:bg-gold/5 bg-white/80 backdrop-blur-sm rounded-full border border-primary/10 shadow-sm">
           <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" /> Voltar</Link>
         </Button>
       </div>
@@ -95,10 +96,10 @@ export default function ManualPadrinhosPage() {
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-20 space-y-16 md:space-y-24">
         
         {/* Section 1: Capa */}
-        <section className="min-h-[40vh] md:min-h-[50vh] flex flex-col items-center justify-center text-center space-y-8 animate-in fade-in duration-1000">
-          <div className="space-y-4">
-            <p className="text-xs tracking-[0.5em] uppercase text-muted-foreground/60 font-light">Especialmente para vocês</p>
-            <h1 className="text-5xl md:text-7xl font-headline text-gold leading-tight">
+        <section className="min-h-[40vh] md:min-h-[50vh] flex flex-col items-center justify-center text-center space-y-6 md:space-y-8 animate-in fade-in duration-1000 pt-10">
+          <div className="space-y-2 md:space-y-4">
+            <p className="text-[10px] md:text-xs tracking-[0.5em] uppercase text-muted-foreground/60 font-light">Especialmente para vocês</p>
+            <h1 className="text-4xl md:text-7xl font-headline text-gold leading-tight">
               Manual dos<br />padrinhos
             </h1>
           </div>
@@ -107,64 +108,64 @@ export default function ManualPadrinhosPage() {
 
         {/* Section 2: Mensagem */}
         <section className="text-center space-y-8 max-w-xl mx-auto animate-in fade-in slide-in-from-bottom-10 duration-1000">
-          <div className="space-y-6 text-muted-foreground font-light leading-relaxed">
+          <div className="space-y-6 text-muted-foreground font-light leading-relaxed px-2">
             {settings?.mainText ? (
-              <p className="text-lg italic whitespace-pre-wrap">{settings.mainText}</p>
+              <p className="text-base md:text-lg italic whitespace-pre-wrap">{settings.mainText}</p>
             ) : (
               <>
-                <p className="text-lg italic">
+                <p className="text-base md:text-lg italic">
                   Existem pessoas que o tempo não apaga e que a vida só faz confirmar. Escolhemos vocês porque o companheirismo e o carinho que compartilhamos são tesouros que queremos levar para sempre.
                 </p>
-                <p className="text-lg italic">
+                <p className="text-base md:text-lg italic">
                   Mais do que testemunhas, queremos vocês ao nosso lado em todos os capítulos da nossa história. Obrigado por serem as pessoas com quem sabemos que podemos contar por toda a vida!
                 </p>
               </>
             )}
           </div>
           <div className="pt-4">
-             <p className="text-gold font-headline text-xl italic leading-relaxed">
+             <p className="text-gold font-headline text-lg md:text-xl italic leading-relaxed">
                "Grandes coisas fez o Senhor por nós, por isso estamos alegres."
                <br />
-               <span className="text-xs not-italic text-primary/60 tracking-widest">(Salmo 126:3)</span>
+               <span className="text-[10px] md:text-xs not-italic text-primary/60 tracking-widest">(Salmo 126:3)</span>
              </p>
           </div>
           <Monogram />
         </section>
 
         {/* Section 3: Madrinhas */}
-        <section className="space-y-12">
+        <section className="space-y-10 md:space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-headline text-gold italic">Inspiração para as madrinhas</h2>
-            <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground/60">{settings?.madrinhasSubtitle || 'Fúcsia'}</p>
+            <h2 className="text-2xl md:text-3xl font-headline text-gold italic">Inspiração para as madrinhas</h2>
+            <p className="text-[10px] md:text-xs tracking-[0.3em] uppercase text-muted-foreground/60">{settings?.madrinhasSubtitle || 'Fúcsia'}</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {madrinhasImages.length > 0 ? (
               madrinhasImages.map((img) => (
-                <div key={img.id} className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-primary/5 shadow-sm group">
+                <div key={img.id} className="aspect-[3/4] relative rounded-xl md:rounded-2xl overflow-hidden border border-primary/5 shadow-sm group">
                   <Image src={img.imageUrl} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt="Inspiração Madrinha" />
                 </div>
               ))
             ) : (
               [1,2,3].map(i => (
-                <div key={i} className="aspect-[3/4] relative rounded-2xl overflow-hidden bg-muted border border-primary/5">
+                <div key={i} className="aspect-[3/4] relative rounded-xl md:rounded-2xl overflow-hidden bg-muted border border-primary/5">
                    <Image src={`https://picsum.photos/seed/madrinha${i}/400/600`} fill className="object-cover" alt="Placeholder Madrinha" />
                 </div>
               ))
             )}
           </div>
 
-          <div className="flex flex-col items-center space-y-6">
-            <p className="text-sm font-light text-muted-foreground italic">Nossa Paleta de Cores</p>
-            <div className="flex gap-4">
+          <div className="flex flex-col items-center space-y-4 md:space-y-6">
+            <p className="text-[10px] md:text-sm font-light text-muted-foreground italic uppercase tracking-widest">Nossa Paleta de Cores</p>
+            <div className="flex gap-4 md:gap-6">
               {[
                 { hex: settings?.madrinhasColors?.primary || '#C21E56', label: 'Vibrante' },
                 { hex: settings?.madrinhasColors?.secondary || '#8B0044', label: 'Fechado' },
-                { hex: settings?.madrinhasColors?.third || settings?.madrinhasColors?.tertiary || '#E0115F', label: 'Suave' }
+                { hex: settings?.madrinhasColors?.tertiary || '#E0115F', label: 'Suave' }
               ].map((color, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
-                  <span className="text-[10px] uppercase tracking-tighter text-muted-foreground/60">{color.label}</span>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
+                  <span className="text-[8px] md:text-[10px] uppercase tracking-tighter text-muted-foreground/60">{color.label}</span>
                 </div>
               ))}
             </div>
@@ -173,21 +174,21 @@ export default function ManualPadrinhosPage() {
         </section>
 
         {/* Section 4: Padrinhos */}
-        <section className="space-y-12">
+        <section className="space-y-10 md:space-y-12">
           <div className="text-center space-y-2">
-            <h2 className="text-3xl font-headline text-gold italic">Inspiração para os padrinhos</h2>
-            <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground/60">{settings?.padrinhosSubtitle || 'Cinza + branco + fúcsia'}</p>
+            <h2 className="text-2xl md:text-3xl font-headline text-gold italic">Inspiração para os padrinhos</h2>
+            <p className="text-[10px] md:text-xs tracking-[0.3em] uppercase text-muted-foreground/60">{settings?.padrinhosSubtitle || 'Cinza + branco + fúcsia'}</p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {padrinhosImages.length > 0 ? (
               padrinhosImages.map((img) => (
-                <div key={img.id} className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-primary/5 shadow-sm group">
+                <div key={img.id} className="aspect-[3/4] relative rounded-xl md:rounded-2xl overflow-hidden border border-primary/5 shadow-sm group">
                   <Image src={img.imageUrl} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt="Inspiração Padrinho" />
                 </div>
               ))
             ) : (
-              <div className="col-span-full max-w-md mx-auto aspect-square relative rounded-3xl overflow-hidden border border-primary/5 shadow-sm">
+              <div className="col-span-full max-w-sm mx-auto aspect-square relative rounded-2xl md:rounded-3xl overflow-hidden border border-primary/5 shadow-sm w-full">
                 <Image 
                   src="https://images.unsplash.com/photo-1594932224828-b4b059b6f68e?q=80&w=800&auto=format&fit=crop" 
                   fill 
@@ -198,17 +199,17 @@ export default function ManualPadrinhosPage() {
             )}
           </div>
 
-          <div className="flex flex-col items-center space-y-6">
-            <p className="text-sm font-light text-muted-foreground italic">Referência do Traje</p>
-            <div className="flex gap-6">
+          <div className="flex flex-col items-center space-y-4 md:space-y-6">
+            <p className="text-[10px] md:text-sm font-light text-muted-foreground italic uppercase tracking-widest">Referência do Traje</p>
+            <div className="flex gap-4 md:gap-8">
               {[
                 { hex: settings?.padrinhosColors?.primary || '#4A4A4A', label: 'Terno' },
                 { hex: settings?.padrinhosColors?.neutral || '#FFFFFF', label: 'Camisa' },
                 { hex: settings?.padrinhosColors?.accent || '#C21E56', label: 'Gravata' }
               ].map((color, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
-                  <div className="w-12 h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
-                  <span className="text-[10px] uppercase tracking-tighter text-muted-foreground/60">{color.label}</span>
+                  <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
+                  <span className="text-[8px] md:text-[10px] uppercase tracking-tighter text-muted-foreground/60">{color.label}</span>
                 </div>
               ))}
             </div>
@@ -217,37 +218,37 @@ export default function ManualPadrinhosPage() {
         </section>
 
         {/* Section 5: Mimo */}
-        <section className="bg-primary/5 rounded-[3rem] p-12 text-center space-y-8 border border-primary/10">
-          <h2 className="text-3xl font-headline text-gold">Preparamos um mimo...</h2>
-          <div className="space-y-6 font-light text-muted-foreground leading-relaxed">
+        <section className="bg-primary/5 rounded-[2rem] md:rounded-[3rem] p-8 md:p-12 text-center space-y-8 border border-primary/10">
+          <h2 className="text-2xl md:text-3xl font-headline text-gold">Preparamos um mimo...</h2>
+          <div className="space-y-6 font-light text-muted-foreground leading-relaxed px-2">
             {settings?.mimoText ? (
-              <p className="italic whitespace-pre-wrap">{settings.mimoText}</p>
+              <p className="italic text-sm md:text-base whitespace-pre-wrap">{settings.mimoText}</p>
             ) : (
               <>
-                <p className="italic">Como forma de agradecer por aceitarem caminhar conosco, escolhemos um pequeno detalhe:</p>
-                <div className="space-y-4">
+                <p className="italic text-sm md:text-base">Como forma de agradecer por aceitarem caminhar conosco, escolhemos um pequeno detalhe:</p>
+                <div className="space-y-6">
                   <div>
-                    <p className="text-gold font-medium uppercase tracking-widest text-xs mb-1">Para as Madrinhas</p>
-                    <p className="italic">Um porta-joias para guardar memórias preciosas.</p>
+                    <p className="text-gold font-medium uppercase tracking-widest text-[10px] md:text-xs mb-1">Para as Madrinhas</p>
+                    <p className="italic text-sm md:text-base">Um porta-joias para guardar memórias preciosas.</p>
                   </div>
                   <div className="w-8 h-[1px] bg-gold/20 mx-auto"></div>
                   <div>
-                    <p className="text-gold font-medium uppercase tracking-widest text-xs mb-1">Para os Padrinhos</p>
-                    <p className="italic">A gravata para ser usada em nosso dia.</p>
+                    <p className="text-gold font-medium uppercase tracking-widest text-[10px] md:text-xs mb-1">Para os Padrinhos</p>
+                    <p className="italic text-sm md:text-base">A gravata para ser usada em nosso dia.</p>
                   </div>
                 </div>
               </>
             )}
           </div>
-          <div className="pt-8">
-            <p className="font-headline text-2xl text-gold italic">Com amor, Felipe & Rayssa</p>
+          <div className="pt-6 md:pt-8">
+            <p className="font-headline text-xl md:text-2xl text-gold italic">Com amor, Felipe & Rayssa</p>
           </div>
           <Monogram />
         </section>
 
         {/* Footer */}
-        <footer className="text-center pt-12 pb-12">
-          <p className="text-[10px] tracking-[0.5em] uppercase text-muted-foreground/40 font-light">Felipe Augusto & Rayssa Caldeira • 2026</p>
+        <footer className="text-center pt-8 md:pt-12 pb-12">
+          <p className="text-[8px] md:text-[10px] tracking-[0.5em] uppercase text-muted-foreground/40 font-light">Felipe Augusto & Rayssa Caldeira • 2026</p>
         </footer>
       </div>
     </div>

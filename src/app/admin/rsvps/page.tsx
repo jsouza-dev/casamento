@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText } from 'lucide-react';
+import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
@@ -20,10 +20,17 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function RSVPsPage() {
   const db = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRsvp, setSelectedRsvp] = useState<any>(null);
 
   const rsvpsQuery = useMemoFirebase(() => {
     return query(collection(db, 'rsvps'), orderBy('createdAt', 'desc'));
@@ -103,17 +110,17 @@ export default function RSVPsPage() {
   };
 
   return (
-    <div className="p-8 space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-headline text-gold">Confirmações de Presença</h1>
-          <p className="text-muted-foreground font-light">Gerencie todas as respostas enviadas pelos convidados.</p>
+          <h1 className="text-2xl md:text-3xl font-headline text-gold">Confirmações de Presença</h1>
+          <p className="text-sm md:text-base text-muted-foreground font-light">Gerencie todas as respostas enviadas pelos convidados.</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={exportCsv} variant="outline" className="border-primary/20 text-gold" disabled={!rsvps || rsvps.length === 0}>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={exportCsv} variant="outline" size="sm" className="border-primary/20 text-gold flex-1 md:flex-none" disabled={!rsvps || rsvps.length === 0}>
             <Download className="mr-2 h-4 w-4" /> CSV
           </Button>
-          <Button onClick={exportPdf} variant="outline" className="border-primary/20 text-gold" disabled={!rsvps || rsvps.length === 0}>
+          <Button onClick={exportPdf} variant="outline" size="sm" className="border-primary/20 text-gold flex-1 md:flex-none" disabled={!rsvps || rsvps.length === 0}>
             <FileText className="mr-2 h-4 w-4" /> PDF
           </Button>
         </div>
@@ -133,68 +140,99 @@ export default function RSVPsPage() {
         </div>
         
         {isLoading ? (
-          <div className="p-20 flex flex-col items-center justify-center text-muted-foreground">
+          <div className="p-12 md:p-20 flex flex-col items-center justify-center text-muted-foreground">
             <Loader2 className="h-8 w-8 animate-spin text-gold mb-2" />
             <p>Carregando lista...</p>
           </div>
         ) : !filteredRsvps || filteredRsvps.length === 0 ? (
-          <div className="p-20 text-center text-muted-foreground">
+          <div className="p-12 md:p-20 text-center text-muted-foreground">
             <UsersIcon className="h-10 w-10 mx-auto mb-2 opacity-20" />
             <p>Nenhuma confirmação encontrada.</p>
           </div>
         ) : (
-          <Table>
-            <TableHeader className="bg-primary/5">
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Confirmou?</TableHead>
-                <TableHead>Acomp.</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead className="hidden md:table-cell">Mensagem</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRsvps.map((rsvp) => (
-                <TableRow key={rsvp.id}>
-                  <TableCell className="font-medium">{rsvp.fullName}</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded-full text-xs ${rsvp.isAttending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {rsvp.isAttending ? 'Sim' : 'Não'}
-                    </span>
-                  </TableCell>
-                  <TableCell>{rsvp.numberOfGuests}</TableCell>
-                  <TableCell>{rsvp.phoneNumber}</TableCell>
-                  <TableCell className="hidden md:table-cell max-w-xs truncate italic text-muted-foreground">
-                    {rsvp.message || "—"}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {format(new Date(rsvp.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => alert(`Acompanhantes: ${rsvp.guestNames?.join(", ") || "Nenhum"}`)}>
-                          Ver Acompanhantes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(rsvp.id)} className="text-destructive">
-                          Excluir
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-primary/5">
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Confirmou?</TableHead>
+                  <TableHead className="hidden sm:table-cell">Acomp.</TableHead>
+                  <TableHead className="hidden md:table-cell">Telefone</TableHead>
+                  <TableHead className="hidden lg:table-cell">Data</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredRsvps.map((rsvp) => (
+                  <TableRow key={rsvp.id}>
+                    <TableCell className="font-medium">{rsvp.fullName}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-[10px] md:text-xs ${rsvp.isAttending ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        {rsvp.isAttending ? 'Sim' : 'Não'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">{rsvp.numberOfGuests}</TableCell>
+                    <TableCell className="hidden md:table-cell">{rsvp.phoneNumber}</TableCell>
+                    <TableCell className="hidden lg:table-cell text-xs text-muted-foreground">
+                      {format(new Date(rsvp.createdAt), 'dd/MM/yyyy', { locale: ptBR })}
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setSelectedRsvp(rsvp)}>
+                            <Eye className="mr-2 h-4 w-4" /> Ver Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(rsvp.id)} className="text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
+
+      {/* RSVP Details Dialog for Mobile/Quick View */}
+      <Dialog open={!!selectedRsvp} onOpenChange={() => setSelectedRsvp(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-headline text-gold">Detalhes da Confirmação</DialogTitle>
+          </DialogHeader>
+          {selectedRsvp && (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <p className="text-muted-foreground">Convidado:</p>
+                <p className="font-medium">{selectedRsvp.fullName}</p>
+                <p className="text-muted-foreground">Status:</p>
+                <p className={selectedRsvp.isAttending ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                  {selectedRsvp.isAttending ? 'Confirmado' : 'Não poderá ir'}
+                </p>
+                <p className="text-muted-foreground">Acompanhantes:</p>
+                <p>{selectedRsvp.numberOfGuests} ({selectedRsvp.guestNames?.join(", ") || "Nenhum"})</p>
+                <p className="text-muted-foreground">Telefone:</p>
+                <p>{selectedRsvp.phoneNumber}</p>
+                <p className="text-muted-foreground">Data:</p>
+                <p>{format(new Date(selectedRsvp.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}</p>
+              </div>
+              <div className="pt-4 border-t border-primary/10">
+                <p className="text-xs text-muted-foreground uppercase tracking-widest mb-2">Mensagem:</p>
+                <p className="text-sm italic text-muted-foreground bg-primary/5 p-4 rounded-lg">
+                  {selectedRsvp.message || "Sem recado enviado."}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
