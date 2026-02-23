@@ -60,7 +60,7 @@ service cloud.firestore {
     match /rsvps/{rsvpId} {
       allow create: if request.resource.data.id == rsvpId;
       allow get, list, delete: if isAdmin();
-      allow update: if isAdmin(); // Permite que admins atualizem se necessário
+      allow update: if isAdmin();
     }
 
     /**
@@ -71,6 +71,22 @@ service cloud.firestore {
       allow update: if isAdmin() && resource != null;
       allow create: if isAdmin();
       allow delete: if false;
+    }
+
+    /**
+     * @description Manual dos Padrinhos settings. Publicly readable; Admin editable.
+     */
+    match /manual_settings/{settingId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Images for the Manual dos Padrinhos. Publicly readable; Admin manageable.
+     */
+    match /manual_images/{imageId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     /**
