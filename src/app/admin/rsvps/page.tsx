@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, FileSpreadsheet } from 'lucide-react';
+import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
@@ -67,7 +67,6 @@ export default function RSVPsPage() {
     for (const row of rows) {
       const data: any = {};
       
-      // Map common headers (case insensitive)
       Object.keys(row).forEach(key => {
         const lowerKey = key.toLowerCase().trim();
         const value = String(row[key]).trim();
@@ -100,7 +99,6 @@ export default function RSVPsPage() {
         }
       });
 
-      // Se não encontrou fullName pela chave, tenta pegar o primeiro valor se for uma string
       if (!data.fullName && Object.values(row).length > 0) {
         const firstVal = Object.values(row)[0];
         if (typeof firstVal === 'string' && firstVal.length > 2) {
@@ -144,7 +142,6 @@ export default function RSVPsPage() {
           const lines = text.split('\n').filter(l => l.trim());
           if (lines.length < 2) throw new Error("Arquivo vazio ou sem dados.");
 
-          // Detect delimiter: try semicolon first, then comma
           let delimiter = ';';
           let headers = lines[0].split(';');
           if (headers.length < 2) {
@@ -200,12 +197,13 @@ export default function RSVPsPage() {
   const exportPdf = (data: any[], title: string) => {
     if (!data) return;
     const doc = new jsPDF();
-    const tableColumn = title.includes("Confirmações") 
+    const isRsvpList = title.includes("Confirmações");
+    const tableColumn = isRsvpList 
       ? ["Nome", "Presença", "Acomp.", "Telefone", "Data"]
-      : ["Nome", "Telefone", "Categoria", "Data"];
+      : ["Nome", "Status", "Telefone", "Categoria"];
 
     const tableRows = data.map(item => {
-      if (title.includes("Confirmações")) {
+      if (isRsvpList) {
         return [
           item.fullName,
           item.isAttending ? "Sim" : "Não",
@@ -214,11 +212,17 @@ export default function RSVPsPage() {
           format(new Date(item.createdAt), 'dd/MM/yyyy')
         ];
       }
+      
+      const rsvpMatch = rsvps?.find(r => r.fullName.toLowerCase().trim() === item.fullName.toLowerCase().trim());
+      const status = rsvpMatch 
+        ? (rsvpMatch.isAttending ? "Confirmado" : "Recusado")
+        : "Pendente";
+
       return [
         item.fullName,
+        status,
         item.phoneNumber || "---",
-        item.category || "Geral",
-        format(new Date(item.createdAt), 'dd/MM/yyyy')
+        item.category || "Geral"
       ];
     });
 
@@ -240,12 +244,18 @@ export default function RSVPsPage() {
     doc.save(`${title.toLowerCase().replace(/\s/g, '_')}.pdf`);
   };
 
+  // Helper to find RSVP status for an invitee
+  const getRsvpStatus = (fullName: string) => {
+    if (!rsvps) return null;
+    return rsvps.find(r => r.fullName.toLowerCase().trim() === fullName.toLowerCase().trim());
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-headline text-gold">Gestão de Convidados</h1>
-          <p className="text-sm md:text-base text-muted-foreground font-light">Controle quem foi convidado e quem já confirmou.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-light">Vincule sua lista mestre às confirmações recebidas.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input 
@@ -263,7 +273,7 @@ export default function RSVPsPage() {
             disabled={isImporting}
           >
             {isImporting && importTarget === 'invitees' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-            Importar Lista Geral (Excel/CSV)
+            Importar Lista Geral
           </Button>
           <Button 
             onClick={() => { setImportTarget('rsvps'); fileInputRef.current?.click(); }} 
@@ -273,7 +283,7 @@ export default function RSVPsPage() {
             disabled={isImporting}
           >
             {isImporting && importTarget === 'rsvps' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            Importar Confirmações (Excel/CSV)
+            Importar Confirmações
           </Button>
         </div>
       </div>
@@ -288,7 +298,6 @@ export default function RSVPsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Tab RSVPs */}
         <TabsContent value="rsvps" className="space-y-4">
           <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-primary/5 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -320,6 +329,7 @@ export default function RSVPsPage() {
                     <TableRow>
                       <TableHead>Nome</TableHead>
                       <TableHead>Presença</TableHead>
+                      <TableHead>Acomp.</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -333,6 +343,7 @@ export default function RSVPsPage() {
                             {rsvp.isAttending ? 'Confirmado' : 'Não poderá ir'}
                           </span>
                         </TableCell>
+                        <TableCell>{rsvp.numberOfGuests}</TableCell>
                         <TableCell>{rsvp.phoneNumber}</TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -354,7 +365,6 @@ export default function RSVPsPage() {
           </div>
         </TabsContent>
 
-        {/* Tab Invitees (Lista Geral) */}
         <TabsContent value="invitees" className="space-y-4">
           <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-primary/5 flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -385,29 +395,45 @@ export default function RSVPsPage() {
                   <TableHeader className="bg-primary/5">
                     <TableRow>
                       <TableHead>Nome</TableHead>
+                      <TableHead>Status RSVP</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredInvitees.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">{item.fullName}</TableCell>
-                        <TableCell>{item.phoneNumber || '---'}</TableCell>
-                        <TableCell><span className="text-xs text-muted-foreground bg-neutral-100 px-2 py-1 rounded">{item.category || 'Geral'}</span></TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleDelete(item.id, 'invitees')} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredInvitees.map((item) => {
+                      const rsvp = getRsvpStatus(item.fullName);
+                      return (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">{item.fullName}</TableCell>
+                          <TableCell>
+                            {rsvp ? (
+                              <span className={rsvp.isAttending ? "text-green-600 flex items-center gap-1 text-xs" : "text-red-600 flex items-center gap-1 text-xs"}>
+                                {rsvp.isAttending ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                                {rsvp.isAttending ? 'Confirmado' : 'Recusado'}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground flex items-center gap-1 text-xs">
+                                <Clock className="h-3 w-3" /> Pendente
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>{item.phoneNumber || '---'}</TableCell>
+                          <TableCell><span className="text-xs text-muted-foreground bg-neutral-100 px-2 py-1 rounded">{item.category || 'Geral'}</span></TableCell>
+                          <TableCell>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleDelete(item.id, 'invitees')} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -416,7 +442,6 @@ export default function RSVPsPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Details Dialog */}
       <Dialog open={!!selectedRsvp} onOpenChange={() => setSelectedRsvp(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="text-gold">Detalhes da Confirmação</DialogTitle></DialogHeader>
