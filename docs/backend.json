@@ -92,6 +92,39 @@
         "createdAt"
       ]
     },
+    "Invitee": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Invitee",
+      "type": "object",
+      "description": "Represents a guest who is officially invited to the wedding, used for the master guest list.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the invitee."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the invited guest."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Contact phone number."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the guest (e.g., Family, Friends, Work)."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when added to the list.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "fullName"
+      ]
+    },
     "EventSetting": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "EventSetting",
@@ -177,7 +210,7 @@
           "schema": {
             "$ref": "#/backend/entities/Gift"
           },
-          "description": "Stores individual gift items available on the wedding registry. These documents are publicly readable by all guests, allowing them to view available gifts. Only authenticated administrators (verified via the `/roles_admin` collection) are authorized to create, update, or delete gift items. This structure supports secure `list` operations for guests and ensures Authorization Independence as gift access does not depend on parent documents.",
+          "description": "Stores individual gift items available on the wedding registry.",
           "params": [
             {
               "name": "giftId",
@@ -193,11 +226,27 @@
           "schema": {
             "$ref": "#/backend/entities/Rsvp"
           },
-          "description": "Stores guest RSVP confirmations for the wedding event. Guests can create (write) new RSVP documents for themselves, but cannot read, update, or delete other RSVPs. Only authenticated administrators (verified via `/roles_admin`) have full read, list, and delete access to all RSVP entries. This structure ensures guest privacy and enables secure admin management, supporting Authorization Independence as no hierarchical lookups are needed.",
+          "description": "Stores guest RSVP confirmations.",
           "params": [
             {
               "name": "rsvpId",
               "description": "The unique identifier for a specific RSVP confirmation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/invitees/{inviteeId}",
+        "definition": {
+          "entityName": "Invitee",
+          "schema": {
+            "$ref": "#/backend/entities/Invitee"
+          },
+          "description": "Stores the master list of invited guests.",
+          "params": [
+            {
+              "name": "inviteeId",
+              "description": "The unique identifier for an invited guest."
             }
           ]
         }
@@ -209,7 +258,7 @@
           "schema": {
             "$ref": "#/backend/entities/EventSetting"
           },
-          "description": "A singleton document storing global configuration and details for the wedding event. This document is publicly readable by all guests to display event information. Only authenticated administrators (verified via `/roles_admin`) are authorized to update its contents. The fixed ID 'main_settings' ensures predictable access and Authorization Independence.",
+          "description": "A singleton document storing global configuration and details for the wedding event.",
           "params": []
         }
       },
@@ -220,7 +269,7 @@
           "schema": {
             "$ref": "#/backend/entities/user"
           },
-          "description": "A collection used for Database Access Control (DBAC) to identify users with administrative privileges. The document ID (`adminId`) corresponds to the Firebase Authentication `uid` of an administrator. The presence of a document at `/roles_admin/{request.auth.uid}` grants admin access. This approach adheres to Authorization Independence by providing a direct lookup for admin roles, eliminating `get()` dependencies on other data for core authorization.",
+          "description": "A collection used for Database Access Control (DBAC) to identify users with administrative privileges.",
           "params": [
             {
               "name": "adminId",
@@ -229,7 +278,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore data structure is designed to be secure, scalable, and easily debuggable, adhering strictly to the core design principles and strategy mandates. \n\n**Authorization Independence (CRITICAL):** Authorization independence is achieved by ensuring that security rules do not rely on `get()` calls to other documents for authorization decisions. Instead, access is determined by the document's path, its presence in a specific collection, or the `request.auth.uid` in conjunction with a dedicated `/roles_admin` collection. For instance, `/gifts/{giftId}` documents are publicly readable, with write access granted only if `request.auth.uid` is present in `/roles_admin/{adminId}`. This avoids hierarchical dependencies, enabling atomic operations and simplifying rule logic.\n\n**QAPs (Queries Are Not Filters):** The structure explicitly supports secure `list` operations. \n*   The `/gifts` collection has a homogeneous security posture: all documents are publicly readable by guests, and writable only by administrators. This allows guests to perform `list` queries on `/gifts` without needing server-side filtering, as all returned documents are legitimately accessible to them. \n*   The `/rsvps` collection is designed for guests to `create` entries. Guests are explicitly prevented from `read` or `list` other RSVPs, ensuring privacy and preventing data exposure. Administrators, verified via the `/roles_admin` collection, have full `read` and `list` access, which is secure because only authorized individuals can perform these operations.\n\n**Structural Segregation:** Each collection (`/gifts`, `/rsvps`, `/event_settings`, `/roles_admin`) maintains a homogeneous security posture. This means all documents within a given collection share the same access requirements, eliminating the need for complex, conditional logic within security rules and making them easier to write and debug.\n\n**Access Modeling:**\n*   **Global Roles (DBAC):** Admin access is managed using the `/roles_admin/{adminId}` collection. The mere existence of a document where `adminId` matches `request.auth.uid` grants administrative privileges. This leverages Firebase Auth UIDs directly for role-based access control without custom claims.\n*   **Path-Based Ownership:** While not strictly 'user-owned' in the traditional sense, `/rsvps/{rsvpId}` allows guests to create their own unique RSVP. The primary ownership/management for all RSVPs resides with the designated administrators.\n\n**Data Clarity and Predictability:** Semantic path names like `/gifts/{giftId}` and `/roles_admin/{adminId}` are used, and parameters are descriptively named. The `EventSetting` entity is implemented as a singleton document at `/event_settings/main_settings` for predictable access to global configuration."
+    ]
   }
 }

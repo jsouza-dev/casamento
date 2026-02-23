@@ -16,20 +16,17 @@ service cloud.firestore {
 
     /**
      * @description Verifica se o usuário é um administrador.
-     * Inclui verificação por coleção de papéis e UIDs/E-mails específicos.
      */
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid)) ||
         request.auth.uid == "X8JMY0mx3gdmjFLZ8mnkWBK5bvH2" ||
-        request.auth.uid == "X8JMY0mx3gdmjFLZ8mnkWBK5bvH2" || // UID do desenvolvedor/admin
         request.auth.token.email == "admin@casamento.com" ||
         request.auth.token.email == "jviitor2628@gmail.com"
       );
     }
 
     // --- Regra Global de Admin ---
-    // Garante que o administrador principal nunca fique sem acesso por regras específicas
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -50,6 +47,13 @@ service cloud.firestore {
     match /rsvps/{rsvpId} {
       allow create: if true;
       allow get, list, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description Lista Geral de Convidados: Apenas Admin.
+     */
+    match /invitees/{inviteeId} {
+      allow read, write: if isAdmin();
     }
 
     /**
