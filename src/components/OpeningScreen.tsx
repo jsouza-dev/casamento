@@ -26,10 +26,12 @@ export function OpeningScreen({ onOpen }: OpeningScreenProps) {
       <div className="relative text-center space-y-12 max-w-2xl px-6 animate-in fade-in zoom-in duration-1000">
         <div className="space-y-6">
           <p className="text-sm tracking-[0.3em] uppercase text-muted-foreground font-light">Convidamos para celebrar o amor de</p>
-          <div className="space-y-2">
-            <h1 className="text-5xl md:text-7xl font-headline text-gold font-light">Felipe Augusto</h1>
-            <span className="text-3xl font-headline text-primary/40">&</span>
-            <h1 className="text-5xl md:text-7xl font-headline text-gold font-light">Rayssa Caldeira</h1>
+          <div className="flex flex-col items-center">
+            <h1 className="text-5xl md:text-7xl font-headline text-gold font-light leading-none">Felipe Augusto</h1>
+            <div className="py-6 md:py-8">
+              <span className="text-3xl md:text-5xl font-headline text-primary/40 italic">&</span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-headline text-gold font-light leading-none">Rayssa Caldeira</h1>
           </div>
         </div>
 
