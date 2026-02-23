@@ -69,25 +69,52 @@ export default function RSVPsPage() {
       
       // Map common headers (case insensitive)
       Object.keys(row).forEach(key => {
-        const lowerKey = key.toLowerCase();
+        const lowerKey = key.toLowerCase().trim();
         const value = String(row[key]).trim();
 
-        if (lowerKey === 'nome' || lowerKey === 'name' || lowerKey === 'fullname' || lowerKey === 'nome completo') {
+        if (
+          lowerKey === 'nome' || 
+          lowerKey === 'name' || 
+          lowerKey === 'fullname' || 
+          lowerKey === 'nome completo' || 
+          lowerKey === 'convidado' ||
+          lowerKey === 'nome do convidado'
+        ) {
           data.fullName = value;
-        } else if (lowerKey === 'telefone' || lowerKey === 'phone' || lowerKey === 'whatsapp' || lowerKey === 'celular') {
+        } else if (
+          lowerKey === 'telefone' || 
+          lowerKey === 'phone' || 
+          lowerKey === 'whatsapp' || 
+          lowerKey === 'celular' || 
+          lowerKey === 'contato' ||
+          lowerKey === 'tel'
+        ) {
           data.phoneNumber = value;
-        } else if (lowerKey === 'categoria' || lowerKey === 'category' || lowerKey === 'grupo') {
+        } else if (
+          lowerKey === 'categoria' || 
+          lowerKey === 'category' || 
+          lowerKey === 'grupo' ||
+          lowerKey === 'tipo'
+        ) {
           data.category = value;
         }
       });
 
-      if (data.fullName) {
+      // Se não encontrou fullName pela chave, tenta pegar o primeiro valor se for uma string
+      if (!data.fullName && Object.values(row).length > 0) {
+        const firstVal = Object.values(row)[0];
+        if (typeof firstVal === 'string' && firstVal.length > 2) {
+          data.fullName = firstVal;
+        }
+      }
+
+      if (data.fullName && data.fullName !== 'undefined') {
         data.createdAt = new Date().toISOString();
         if (importTarget === 'rsvps') {
           data.isAttending = true;
           data.numberOfGuests = 0;
         }
-        await addDocumentNonBlocking(colRef, data);
+        addDocumentNonBlocking(colRef, data);
         count++;
       }
     }
@@ -114,15 +141,23 @@ export default function RSVPsPage() {
           rows = XLSX.utils.sheet_to_json(worksheet);
         } else if (extension === 'csv') {
           const text = event.target?.result as string;
-          const lines = text.split('\n');
-          const headers = lines[0].split(';').map(h => h.trim());
+          const lines = text.split('\n').filter(l => l.trim());
+          if (lines.length < 2) throw new Error("Arquivo vazio ou sem dados.");
+
+          // Detect delimiter: try semicolon first, then comma
+          let delimiter = ';';
+          let headers = lines[0].split(';');
+          if (headers.length < 2) {
+            delimiter = ',';
+            headers = lines[0].split(',');
+          }
+          headers = headers.map(h => h.trim().replace(/"/g, ''));
           
           for (let i = 1; i < lines.length; i++) {
-            if (!lines[i].trim()) continue;
-            const values = lines[i].split(';');
+            const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
             const row: any = {};
             headers.forEach((header, index) => {
-              if (values[index]) row[header] = values[index].trim();
+              if (header && values[index]) row[header] = values[index];
             });
             rows.push(row);
           }
@@ -130,16 +165,24 @@ export default function RSVPsPage() {
 
         const count = await processDataRows(rows);
 
-        toast({
-          title: "Importação concluída",
-          description: `${count} registros foram importados para ${importTarget === 'rsvps' ? 'Confirmações' : 'Lista Geral'}.`,
-        });
+        if (count > 0) {
+          toast({
+            title: "Importação concluída",
+            description: `${count} registros foram importados para ${importTarget === 'rsvps' ? 'Confirmações' : 'Lista Geral'}.`,
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Nenhum dado importado",
+            description: "Não encontramos nomes válidos no arquivo. Verifique os cabeçalhos das colunas.",
+          });
+        }
       } catch (error) {
         console.error("Import error:", error);
         toast({
           variant: "destructive",
           title: "Erro na importação",
-          description: "Verifique se o arquivo está no formato correto (XLSX, XLS ou CSV com ponto e vírgula).",
+          description: "Não foi possível ler o arquivo. Certifique-se de que ele contém uma lista de nomes.",
         });
       } finally {
         setIsImporting(false);
@@ -167,7 +210,7 @@ export default function RSVPsPage() {
           item.fullName,
           item.isAttending ? "Sim" : "Não",
           item.numberOfGuests,
-          item.phoneNumber,
+          item.phoneNumber || "---",
           format(new Date(item.createdAt), 'dd/MM/yyyy')
         ];
       }
