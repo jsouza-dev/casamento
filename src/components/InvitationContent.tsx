@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -108,7 +107,11 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
           asChild 
           className="border-primary/20 text-gold hover:bg-primary/5 hover:text-gold"
         >
-          <a href="https://www.google.com/maps/place/Espa%C3%A7o+Fazenda+Paradiso" target="_blank" rel="noopener noreferrer">
+          <a 
+            href="https://www.google.com/maps/dir//Espa%C3%A7o+Fazenda+Paradiso+Fazenda+Campo+Alegre+Zona+rural+Liberdade+2+Contagem+-+MG,+32064-530/@-19.833837,-44.0980217,16z/data=!4m5!4m4!1m0!1m2!1m1!1s0xa6957cc29f1f67:0x3dbdab1030411778" 
+            target="_blank" 
+            rel="noopener noreferrer"
+          >
             <MapPin className="mr-2 h-4 w-4" /> Ver rota no Google Maps
           </a>
         </Button>
