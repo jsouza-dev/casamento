@@ -2,13 +2,10 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { Calendar, Clock, MapPin, Heart, Gift, Users, ExternalLink, ArrowLeft, Lock } from 'lucide-react';
+import { Calendar, Clock, MapPin, Heart, Gift, Users, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { RSVPForm } from '@/components/RSVPForm';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface InvitationContentProps {
   onBack: () => void;
@@ -134,49 +131,29 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
       {/* Gifts Section */}
       <section 
         ref={(el) => { sectionRefs.current[3] = el; }}
-        className="fade-in-section space-y-12"
+        className="fade-in-section space-y-12 text-center"
       >
-        <div className="text-center space-y-4">
+        <div className="space-y-4">
           <h2 className="text-3xl font-headline text-gold">Lista de Presentes</h2>
           <p className="font-light text-muted-foreground max-w-lg mx-auto">
-            Sua presença é o nosso maior presente, mas se desejar nos presentear, aqui estão algumas sugestões para o nosso novo lar.
+            Sua presença é o nosso maior presente, mas se desejar nos presentear, disponibilizamos nossa lista virtual completa no link abaixo:
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[
-            { id: 'gift-coffee', name: 'Cafeteira Nespresso', desc: 'Para nossas manhãs de café juntos.', price: 'R$ 450,00' },
-            { id: 'gift-tv', name: 'Smart TV 55"', desc: 'Para nossas maratonas de cinema.', price: 'R$ 2.800,00' },
-            { id: 'gift-fridge', name: 'Geladeira Inox', desc: 'Um clássico indispensável.', price: 'R$ 3.500,00' },
-            { id: 'gift-honeymoon', name: 'Jantar Romântico', desc: 'Um momento especial em nossa lua de mel.', price: 'R$ 300,00' }
-          ].map((gift) => {
-            const img = PlaceHolderImages.find(p => p.id === gift.id);
-            return (
-              <Card key={gift.id} className="border-primary/10 shadow-none overflow-hidden hover:shadow-md transition-shadow">
-                <div className="aspect-square relative overflow-hidden bg-muted">
-                  <Image 
-                    src={img?.imageUrl || 'https://picsum.photos/400/400'} 
-                    alt={gift.name}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={img?.imageHint || 'gift'}
-                  />
-                </div>
-                <CardContent className="p-6 space-y-4">
-                  <div className="space-y-1">
-                    <h3 className="font-headline text-lg">{gift.name}</h3>
-                    <p className="text-sm font-light text-muted-foreground leading-relaxed">{gift.desc}</p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2">
-                    <span className="font-medium text-gold">{gift.price}</span>
-                    <Button variant="ghost" size="sm" className="text-gold hover:text-gold hover:bg-primary/5">
-                      Presentear <ExternalLink className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+        <div className="flex justify-center pt-4">
+          <Button 
+            asChild 
+            className="rounded-full bg-gold hover:bg-gold/90 text-white px-10 py-7 text-lg font-light shadow-md transition-all hover:scale-105"
+          >
+            <a 
+              href="https://site.lejour.com.br/lista-de-presentes/felipe-e-rayssa26" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-2"
+            >
+              <Gift className="h-5 w-5" /> Acessar Lista de Presentes
+            </a>
+          </Button>
         </div>
       </section>
 
