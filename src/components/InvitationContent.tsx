@@ -3,13 +3,17 @@
 
 import { useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Calendar, Clock, MapPin, Heart, Gift, Users, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, MapPin, Heart, Gift, Users, ExternalLink, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RSVPForm } from '@/components/RSVPForm';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
-export function InvitationContent() {
+interface InvitationContentProps {
+  onBack: () => void;
+}
+
+export function InvitationContent({ onBack }: InvitationContentProps) {
   const sectionRefs = useRef<(HTMLElement | null)[]>([]);
 
   useEffect(() => {
@@ -31,11 +35,21 @@ export function InvitationContent() {
     return () => observer.disconnect();
   }, []);
 
-  const heroImage = PlaceHolderImages.find(img => img.id === 'wedding-hero');
-
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 space-y-24 md:space-y-32 bg-[#F8F6F2]">
       
+      {/* Back Button */}
+      <div className="flex justify-start">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onBack}
+          className="text-gold hover:text-gold/80 hover:bg-gold/5"
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Voltar ao início
+        </Button>
+      </div>
+
       {/* Event Details Section */}
       <section 
         ref={(el) => { sectionRefs.current[0] = el; }}

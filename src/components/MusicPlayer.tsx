@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Music2, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -50,7 +50,6 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
       }
     };
 
-    // Load YouTube API script safely if not already present
     if (typeof document !== 'undefined' && !document.getElementById('youtube-api-script')) {
       const tag = document.createElement('script');
       tag.id = 'youtube-api-script';
@@ -68,12 +67,21 @@ export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
   }, []);
 
   useEffect(() => {
-    if (playOnOpen && isReady && playerRef.current) {
-      try {
-        playerRef.current.playVideo();
-        setIsPlaying(true);
-      } catch (e) {
-        // Silently fail if autoplay is blocked or player state is invalid
+    if (isReady && playerRef.current) {
+      if (playOnOpen) {
+        try {
+          playerRef.current.playVideo();
+          setIsPlaying(true);
+        } catch (e) {
+          console.error("Auto-play failed:", e);
+        }
+      } else {
+        try {
+          playerRef.current.pauseVideo();
+          setIsPlaying(false);
+        } catch (e) {
+          // Silently handle pause error
+        }
       }
     }
   }, [playOnOpen, isReady]);

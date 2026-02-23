@@ -23,7 +23,7 @@ export default function Home() {
           key="invitation-container"
           className="animate-in fade-in slide-in-from-bottom-10 duration-1000"
         >
-          <InvitationContent />
+          <InvitationContent onBack={() => setIsOpen(false)} />
         </div>
       )}
 
