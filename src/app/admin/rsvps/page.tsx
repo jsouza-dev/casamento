@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -10,7 +11,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp } from 'lucide-react';
+import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, FileSpreadsheet } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
@@ -21,6 +22,7 @@ import { ptBR } from 'date-fns/locale';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useToast } from '@/hooks/use-toast';
+import * as XLSX from 'xlsx';
 import {
   Dialog,
   DialogContent,
@@ -58,63 +60,98 @@ export default function RSVPsPage() {
     }
   };
 
-  const handleImportCsv = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const processDataRows = async (rows: any[]) => {
+    const colRef = collection(db, importTarget);
+    let count = 0;
+
+    for (const row of rows) {
+      const data: any = {};
+      
+      // Map common headers (case insensitive)
+      Object.keys(row).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        const value = String(row[key]).trim();
+
+        if (lowerKey === 'nome' || lowerKey === 'name' || lowerKey === 'fullname' || lowerKey === 'nome completo') {
+          data.fullName = value;
+        } else if (lowerKey === 'telefone' || lowerKey === 'phone' || lowerKey === 'whatsapp' || lowerKey === 'celular') {
+          data.phoneNumber = value;
+        } else if (lowerKey === 'categoria' || lowerKey === 'category' || lowerKey === 'grupo') {
+          data.category = value;
+        }
+      });
+
+      if (data.fullName) {
+        data.createdAt = new Date().toISOString();
+        if (importTarget === 'rsvps') {
+          data.isAttending = true;
+          data.numberOfGuests = 0;
+        }
+        await addDocumentNonBlocking(colRef, data);
+        count++;
+      }
+    }
+    return count;
+  };
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsImporting(true);
     const reader = new FileReader();
+    const extension = file.name.split('.').pop()?.toLowerCase();
+
     reader.onload = async (event) => {
       try {
-        const text = event.target?.result as string;
-        const lines = text.split('\n');
-        const headers = lines[0].split(';').map(h => h.trim().toLowerCase());
-        
-        const colRef = collection(db, importTarget);
-        let count = 0;
+        let rows: any[] = [];
 
-        for (let i = 1; i < lines.length; i++) {
-          if (!lines[i].trim()) continue;
-          const values = lines[i].split(';').map(v => v.trim());
-          const data: any = {};
+        if (extension === 'xlsx' || extension === 'xls') {
+          const data = new Uint8Array(event.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          rows = XLSX.utils.sheet_to_json(worksheet);
+        } else if (extension === 'csv') {
+          const text = event.target?.result as string;
+          const lines = text.split('\n');
+          const headers = lines[0].split(';').map(h => h.trim());
           
-          headers.forEach((header, index) => {
-            if (values[index]) {
-              // Map some common headers
-              if (header === 'nome' || header === 'name') data.fullName = values[index];
-              else if (header === 'telefone' || header === 'phone') data.phoneNumber = values[index];
-              else if (header === 'categoria' || header === 'category') data.category = values[index];
-              else data[header] = values[index];
-            }
-          });
-
-          if (data.fullName) {
-            data.createdAt = new Date().toISOString();
-            if (importTarget === 'rsvps') {
-              data.isAttending = true;
-              data.numberOfGuests = 0;
-            }
-            await addDocumentNonBlocking(colRef, data);
-            count++;
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i].trim()) continue;
+            const values = lines[i].split(';');
+            const row: any = {};
+            headers.forEach((header, index) => {
+              if (values[index]) row[header] = values[index].trim();
+            });
+            rows.push(row);
           }
         }
+
+        const count = await processDataRows(rows);
 
         toast({
           title: "Importação concluída",
           description: `${count} registros foram importados para ${importTarget === 'rsvps' ? 'Confirmações' : 'Lista Geral'}.`,
         });
       } catch (error) {
+        console.error("Import error:", error);
         toast({
           variant: "destructive",
           title: "Erro na importação",
-          description: "Verifique se o arquivo CSV está no formato correto (separado por ponto e vírgula).",
+          description: "Verifique se o arquivo está no formato correto (XLSX, XLS ou CSV com ponto e vírgula).",
         });
       } finally {
         setIsImporting(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
       }
     };
-    reader.readAsText(file);
+
+    if (extension === 'xlsx' || extension === 'xls') {
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.readAsText(file);
+    }
   };
 
   const exportPdf = (data: any[], title: string) => {
@@ -170,10 +207,10 @@ export default function RSVPsPage() {
         <div className="flex flex-wrap gap-2">
           <input 
             type="file" 
-            accept=".csv" 
+            accept=".csv, .xlsx, .xls" 
             className="hidden" 
             ref={fileInputRef}
-            onChange={handleImportCsv}
+            onChange={handleImportFile}
           />
           <Button 
             onClick={() => { setImportTarget('invitees'); fileInputRef.current?.click(); }} 
@@ -182,7 +219,8 @@ export default function RSVPsPage() {
             className="border-primary/20 text-gold flex-1 md:flex-none"
             disabled={isImporting}
           >
-            <FileUp className="mr-2 h-4 w-4" /> Importar Lista Geral
+            {isImporting && importTarget === 'invitees' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
+            Importar Lista Geral (Excel/CSV)
           </Button>
           <Button 
             onClick={() => { setImportTarget('rsvps'); fileInputRef.current?.click(); }} 
@@ -191,7 +229,8 @@ export default function RSVPsPage() {
             className="border-primary/20 text-gold flex-1 md:flex-none"
             disabled={isImporting}
           >
-            <Upload className="mr-2 h-4 w-4" /> Importar Confirmações
+            {isImporting && importTarget === 'rsvps' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+            Importar Confirmações (Excel/CSV)
           </Button>
         </div>
       </div>
