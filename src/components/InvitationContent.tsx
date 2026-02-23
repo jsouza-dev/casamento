@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -83,7 +82,7 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
               <MapPin className="h-6 w-6 text-gold" />
             </div>
             <h3 className="font-headline text-xl">Local</h3>
-            <p className="font-light">Espaço Fazenda Paradiso<br />Betim – Minas Gerais</p>
+            <p className="font-light">Espaço Fazenda Paradiso<br />Contagem – Minas Gerais</p>
           </div>
         </div>
       </section>
@@ -96,7 +95,7 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
         <h2 className="text-3xl font-headline text-gold">Localização</h2>
         <div className="rounded-2xl overflow-hidden border border-primary/10 shadow-sm aspect-video w-full max-w-2xl mx-auto">
           <iframe
-            src="https://www.google.com/maps?q=Espaço+Fazenda+Paradiso+Betim+MG&output=embed"
+            src="https://www.google.com/maps?q=Espaço+Fazenda+Paradiso+Contagem+MG&output=embed"
             width="100%"
             height="100%"
             style={{ border: 0 }}

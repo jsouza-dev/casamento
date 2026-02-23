@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -59,7 +58,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <Label>Endereço Completo</Label>
-              <Textarea defaultValue="Betim – Minas Gerais" className="border-primary/10" />
+              <Textarea defaultValue="Contagem – Minas Gerais" className="border-primary/10" />
             </div>
           </CardContent>
         </Card>
