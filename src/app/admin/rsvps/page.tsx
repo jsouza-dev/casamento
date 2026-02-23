@@ -1,3 +1,4 @@
+
 'use client';
 
 import { 
@@ -10,13 +11,15 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon } from 'lucide-react';
+import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function RSVPsPage() {
   const db = useFirestore();
@@ -63,6 +66,42 @@ export default function RSVPsPage() {
     document.body.removeChild(link);
   };
 
+  const exportPdf = () => {
+    if (!rsvps) return;
+    
+    const doc = new jsPDF();
+    const tableColumn = ["Nome", "Presença", "Acomp.", "Telefone", "Data"];
+    const tableRows: any[] = [];
+
+    rsvps.forEach(rsvp => {
+      const rsvpData = [
+        rsvp.fullName,
+        rsvp.isAttending ? "Sim" : "Não",
+        rsvp.numberOfGuests,
+        rsvp.phoneNumber,
+        format(new Date(rsvp.createdAt), 'dd/MM/yyyy')
+      ];
+      tableRows.push(rsvpData);
+    });
+
+    doc.setFontSize(18);
+    doc.setTextColor(200, 169, 106); // Cor Gold do tema
+    doc.text("Lista de Confirmações - Felipe & Rayssa", 14, 15);
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 22);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 30,
+      headStyles: { fillColor: [200, 169, 106] },
+      theme: 'grid',
+    });
+
+    doc.save("convidados_casamento.pdf");
+  };
+
   return (
     <div className="p-8 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -70,9 +109,14 @@ export default function RSVPsPage() {
           <h1 className="text-3xl font-headline text-gold">Confirmações de Presença</h1>
           <p className="text-muted-foreground font-light">Gerencie todas as respostas enviadas pelos convidados.</p>
         </div>
-        <Button onClick={exportCsv} variant="outline" className="border-primary/20 text-gold" disabled={!rsvps || rsvps.length === 0}>
-          <Download className="mr-2 h-4 w-4" /> Exportar CSV
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={exportCsv} variant="outline" className="border-primary/20 text-gold" disabled={!rsvps || rsvps.length === 0}>
+            <Download className="mr-2 h-4 w-4" /> CSV
+          </Button>
+          <Button onClick={exportPdf} variant="outline" className="border-primary/20 text-gold" disabled={!rsvps || rsvps.length === 0}>
+            <FileText className="mr-2 h-4 w-4" /> PDF
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
