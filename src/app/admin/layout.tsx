@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Gift, Settings, MessageSquare, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Users, Gift, Settings, MessageSquare, ArrowLeft, BookHeart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -11,6 +11,7 @@ const navItems = [
   { href: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/admin/rsvps', icon: Users, label: 'RSVPs' },
   { href: '/admin/gifts', icon: Gift, label: 'Presentes' },
+  { href: '/admin/manual-padrinhos', icon: BookHeart, label: 'Manual Padrinhos' },
   { href: '/admin/messages', icon: MessageSquare, label: 'Mensagens IA' },
   { href: '/admin/settings', icon: Settings, label: 'Configurações' },
 ];

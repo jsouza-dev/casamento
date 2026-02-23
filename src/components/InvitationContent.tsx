@@ -196,8 +196,9 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
         <Button 
           variant="outline" 
           className="border-primary/20 text-gold hover:bg-gold hover:text-white"
+          asChild
         >
-          Acessar Espaço dos Padrinhos
+          <Link href="/padrinhos">Acessar Espaço dos Padrinhos</Link>
         </Button>
       </section>
 
