@@ -1,8 +1,10 @@
+
 'use client';
 
 import { useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Calendar, Clock, MapPin, Heart, Gift, Users, ExternalLink, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { Calendar, Clock, MapPin, Heart, Gift, Users, ExternalLink, ArrowLeft, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { RSVPForm } from '@/components/RSVPForm';
@@ -200,9 +202,18 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
       </section>
 
       {/* Footer */}
-      <footer className="text-center pt-12 pb-24 space-y-4 opacity-60">
-        <p className="font-headline text-xl text-gold italic">Felipe & Rayssa</p>
-        <p className="text-xs tracking-widest uppercase font-light">21.03.2026</p>
+      <footer className="text-center pt-12 pb-24 space-y-6 opacity-60">
+        <div className="space-y-2">
+          <p className="font-headline text-xl text-gold italic">Felipe & Rayssa</p>
+          <p className="text-xs tracking-widest uppercase font-light">21.03.2026</p>
+        </div>
+        <div className="pt-8">
+          <Button variant="ghost" size="sm" asChild className="text-[10px] text-muted-foreground hover:text-gold uppercase tracking-tighter gap-1">
+            <Link href="/login">
+              <Lock className="h-3 w-3" /> Painel do Casal
+            </Link>
+          </Button>
+        </div>
       </footer>
     </div>
   );

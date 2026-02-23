@@ -2,6 +2,7 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import {Toaster} from '@/components/ui/toaster';
+import {FirebaseClientProvider} from '@/firebase';
 
 export const metadata: Metadata = {
   title: 'Felipe & Rayssa | Convite de Casamento',
@@ -21,8 +22,10 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@100..900&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased bg-[#F8F6F2]">
-        {children}
-        <Toaster />
+        <FirebaseClientProvider>
+          {children}
+          <Toaster />
+        </FirebaseClientProvider>
       </body>
     </html>
   );
