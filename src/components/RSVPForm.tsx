@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CheckCircle2, UserPlus, AlertCircle, Search } from 'lucide-react';
+import { CheckCircle2, UserPlus, AlertCircle, Search, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -21,7 +21,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query } from 'firebase/firestore';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
@@ -85,19 +85,22 @@ export function RSVPForm() {
 
   // Lookup invitee on name change/blur
   const handleVerifyName = () => {
-    if (!nameInput || nameInput.length < 3 || !allInvitees) return;
+    if (!nameInput || nameInput.length < 2 || !allInvitees) return;
     
     setIsVerifying(true);
-    const match = allInvitees.find(inv => 
-      inv.fullName.toLowerCase().trim() === nameInput.toLowerCase().trim()
-    );
+    const normalizedSearch = nameInput.toLowerCase().trim();
+    
+    const match = allInvitees.find(inv => {
+      const normalizedInDB = inv.fullName.toLowerCase().trim();
+      return normalizedInDB === normalizedSearch || normalizedInDB.includes(normalizedSearch);
+    });
 
     if (match) {
       setInviteeMatch(match);
       // Reset guestsCount if it exceeds new limit
-      const maxAccomp = (match.guestLimit || 1) - 1;
+      const maxAccomp = Math.max(0, (Number(match.guestLimit) || 1) - 1);
       if (form.getValues('guestsCount') > maxAccomp) {
-        form.setValue('guestsCount', maxAccomp);
+        form.setValue('guestsCount', 0);
       }
     } else {
       setInviteeMatch(null);
@@ -105,7 +108,7 @@ export function RSVPForm() {
     setIsVerifying(false);
   };
 
-  const maxAccompaniments = inviteeMatch ? (inviteeMatch.guestLimit || 1) - 1 : 0;
+  const maxAccompaniments = inviteeMatch ? Math.max(0, (Number(inviteeMatch.guestLimit) || 1) - 1) : 0;
 
   async function onSubmit(values: FormValues) {
     if (!inviteeMatch && allInvitees && allInvitees.length > 0) {
@@ -184,16 +187,17 @@ export function RSVPForm() {
                       size="icon" 
                       onClick={handleVerifyName}
                       className="absolute right-1 top-1/2 -translate-y-1/2 text-gold h-8 w-8"
+                      disabled={isVerifying}
                     >
-                      <Search className="h-4 w-4" />
+                      {isVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                     </Button>
                   </div>
                 </FormControl>
                 {inviteeMatch ? (
                   <p className="text-[10px] text-green-600 flex items-center gap-1 mt-1">
-                    <CheckCircle2 className="h-3 w-3" /> Convidado localizado. Limite de {inviteeMatch.guestLimit} pessoa(s).
+                    <CheckCircle2 className="h-3 w-3" /> Convidado localizado. Convite para {inviteeMatch.guestLimit} pessoa(s).
                   </p>
-                ) : nameInput.length > 3 && !isVerifying && (
+                ) : nameInput.length > 2 && !isVerifying && (
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
                     <AlertCircle className="h-3 w-3" /> Verifique se o nome está correto.
                   </p>

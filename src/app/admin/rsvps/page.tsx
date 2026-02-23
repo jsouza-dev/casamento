@@ -65,7 +65,10 @@ export default function RSVPsPage() {
     let count = 0;
 
     for (const row of rows) {
-      const data: any = {};
+      const data: any = {
+        guestLimit: 1, // Default is individual
+        category: 'Geral'
+      };
       
       Object.keys(row).forEach(key => {
         const lowerKey = key.toLowerCase().trim();
@@ -77,7 +80,8 @@ export default function RSVPsPage() {
           lowerKey === 'fullname' || 
           lowerKey === 'nome completo' || 
           lowerKey === 'convidado' ||
-          lowerKey === 'nome do convidado'
+          lowerKey === 'nome do convidado' ||
+          lowerKey.includes('nome')
         ) {
           data.fullName = value;
         } else if (
@@ -86,38 +90,47 @@ export default function RSVPsPage() {
           lowerKey === 'whatsapp' || 
           lowerKey === 'celular' || 
           lowerKey === 'contato' ||
-          lowerKey === 'tel'
+          lowerKey === 'tel' ||
+          lowerKey.includes('tel')
         ) {
           data.phoneNumber = value;
         } else if (
           lowerKey === 'categoria' || 
           lowerKey === 'category' || 
           lowerKey === 'grupo' ||
-          lowerKey === 'tipo'
+          lowerKey === 'tipo' ||
+          lowerKey.includes('cat')
         ) {
           data.category = value;
         } else if (
           lowerKey === 'total de pessoas' || 
           lowerKey === 'total' || 
           lowerKey === 'limite' ||
-          lowerKey === 'pessoas'
+          lowerKey === 'pessoas' ||
+          lowerKey === 'qtd' ||
+          lowerKey.includes('total') ||
+          lowerKey.includes('limite')
         ) {
-          data.guestLimit = parseInt(value) || 1;
+          const parsed = parseInt(value);
+          if (!isNaN(parsed)) {
+            data.guestLimit = parsed;
+          }
         }
       });
 
+      // Se não encontrou nome pelo cabeçalho, tenta pegar a primeira coluna que parece um nome
       if (!data.fullName && Object.values(row).length > 0) {
-        const firstVal = Object.values(row)[0];
-        if (typeof firstVal === 'string' && firstVal.length > 2) {
-          data.fullName = firstVal;
+        const firstVal = Object.values(row).find(v => typeof v === 'string' && v.length > 2);
+        if (firstVal) {
+          data.fullName = String(firstVal).trim();
         }
       }
 
-      if (data.fullName && data.fullName !== 'undefined') {
+      if (data.fullName && data.fullName !== 'undefined' && data.fullName.length > 1) {
         data.createdAt = new Date().toISOString();
         if (importTarget === 'rsvps') {
           data.isAttending = true;
-          data.numberOfGuests = 0;
+          data.numberOfGuests = Math.max(0, data.guestLimit - 1);
         }
         addDocumentNonBlocking(colRef, data);
         count++;
@@ -146,24 +159,24 @@ export default function RSVPsPage() {
           rows = XLSX.utils.sheet_to_json(worksheet);
         } else if (extension === 'csv') {
           const text = event.target?.result as string;
-          const lines = text.split('\n').filter(l => l.trim());
+          // Tenta detectar delimitador (vírgula, ponto e vírgula ou tab)
+          const firstLine = text.split('\n')[0];
+          let delimiter = ',';
+          if (firstLine.includes(';')) delimiter = ';';
+          else if (firstLine.includes('\t')) delimiter = '\t';
+
+          const lines = text.split(/\r?\n/).filter(l => l.trim());
           if (lines.length < 2) throw new Error("Arquivo vazio ou sem dados.");
 
-          let delimiter = ';';
-          let headers = lines[0].split(';');
-          if (headers.length < 2) {
-            delimiter = ',';
-            headers = lines[0].split(',');
-          }
-          headers = headers.map(h => h.trim().replace(/"/g, ''));
+          let headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
           
           for (let i = 1; i < lines.length; i++) {
             const values = lines[i].split(delimiter).map(v => v.trim().replace(/"/g, ''));
             const row: any = {};
             headers.forEach((header, index) => {
-              if (header && values[index]) row[header] = values[index];
+              if (header && values[index] !== undefined) row[header] = values[index];
             });
-            rows.push(row);
+            if (Object.keys(row).length > 0) rows.push(row);
           }
         }
 
@@ -207,7 +220,7 @@ export default function RSVPsPage() {
     const isRsvpList = title.includes("Confirmações");
     const tableColumn = isRsvpList 
       ? ["Nome", "Presença", "Acomp.", "Telefone", "Data"]
-      : ["Nome", "Status", "Lím.", "Categoria"];
+      : ["Nome", "Status", "Lím. Total", "Categoria"];
 
     const tableRows = data.map(item => {
       if (isRsvpList) {
@@ -228,7 +241,7 @@ export default function RSVPsPage() {
       return [
         item.fullName,
         status,
-        item.guestLimit || "---",
+        item.guestLimit || "1",
         item.category || "Geral"
       ];
     });
@@ -403,7 +416,7 @@ export default function RSVPsPage() {
                     <TableRow>
                       <TableHead>Nome</TableHead>
                       <TableHead>Status RSVP</TableHead>
-                      <TableHead>Lím. Pessoas</TableHead>
+                      <TableHead>Lím. Total</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -426,7 +439,7 @@ export default function RSVPsPage() {
                               </span>
                             )}
                           </TableCell>
-                          <TableCell>{item.guestLimit || '---'}</TableCell>
+                          <TableCell>{item.guestLimit || '1'}</TableCell>
                           <TableCell><span className="text-xs text-muted-foreground bg-neutral-100 px-2 py-1 rounded">{item.category || 'Geral'}</span></TableCell>
                           <TableCell>
                             <DropdownMenu>
