@@ -1,10 +1,9 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Lock } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Monogram } from '@/components/Monogram';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
@@ -105,19 +104,28 @@ export default function ManualPadrinhosPage() {
           </div>
           <Monogram showDate />
           <div className="opacity-40 max-w-[200px] grayscale brightness-110">
-             <Image src="https://images.unsplash.com/photo-1522673607200-1648832cee98?q=80&w=200&auto=format&fit=crop" width={200} height={100} alt="Floral" className="mix-blend-multiply" />
+             <Image 
+              src={settings?.coverImageUrl || "https://images.unsplash.com/photo-1522673607200-1648832cee98?q=80&w=200&auto=format&fit=crop"} 
+              width={200} height={100} alt="Floral" className="mix-blend-multiply object-contain" 
+            />
           </div>
         </section>
 
         {/* Section 2: Mensagem */}
         <section className="text-center space-y-8 max-w-xl mx-auto animate-in fade-in slide-in-from-bottom-10 duration-1000">
           <div className="space-y-6 text-muted-foreground font-light leading-relaxed">
-            <p className="text-lg italic">
-              {settings?.mainText || "Existem pessoas que o tempo não apaga e que a vida só faz confirmar. Escolhemos vocês porque o companheirismo e o carinho que compartilhamos são tesouros que queremos levar para sempre."}
-            </p>
-            <p className="text-lg italic">
-              Mais do que testemunhas, queremos vocês ao nosso lado em todos os capítulos da nossa história. Obrigado por serem as pessoas com quem sabemos que podemos contar por toda a vida!
-            </p>
+            {settings?.mainText ? (
+              <p className="text-lg italic whitespace-pre-wrap">{settings.mainText}</p>
+            ) : (
+              <>
+                <p className="text-lg italic">
+                  Existem pessoas que o tempo não apaga e que a vida só faz confirmar. Escolhemos vocês porque o companheirismo e o carinho que compartilhamos são tesouros que queremos levar para sempre.
+                </p>
+                <p className="text-lg italic">
+                  Mais do que testemunhas, queremos vocês ao nosso lado em todos os capítulos da nossa história. Obrigado por serem as pessoas com quem sabemos que podemos contar por toda a vida!
+                </p>
+              </>
+            )}
           </div>
           <div className="pt-4">
              <p className="text-gold font-headline text-xl italic leading-relaxed">
@@ -133,12 +141,12 @@ export default function ManualPadrinhosPage() {
         <section className="space-y-12">
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-headline text-gold italic">Inspiração para as madrinhas</h2>
-            <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground/60">Tonalidade: Fúcsia</p>
+            <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground/60">{settings?.madrinhasSubtitle || 'Fúcsia'}</p>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {madrinhasImages.length > 0 ? (
-              madrinhasImages.map((img, i) => (
+              madrinhasImages.map((img) => (
                 <div key={img.id} className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-primary/5 shadow-sm group">
                   <Image src={img.imageUrl} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt="Inspiração Madrinha" />
                 </div>
@@ -156,9 +164,9 @@ export default function ManualPadrinhosPage() {
             <p className="text-sm font-light text-muted-foreground italic">Nossa Paleta de Cores</p>
             <div className="flex gap-4">
               {[
-                { hex: settings?.madrinhasColors?.[0] || '#C21E56', label: 'Vibrante' },
-                { hex: settings?.madrinhasColors?.[1] || '#8B0044', label: 'Fechado' },
-                { hex: settings?.madrinhasColors?.[2] || '#E0115F', label: 'Suave' }
+                { hex: settings?.madrinhasColors?.primary || '#C21E56', label: 'Vibrante' },
+                { hex: settings?.madrinhasColors?.secondary || '#8B0044', label: 'Fechado' },
+                { hex: settings?.madrinhasColors?.tertiary || '#E0115F', label: 'Suave' }
               ].map((color, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   <div className="w-12 h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
@@ -174,26 +182,35 @@ export default function ManualPadrinhosPage() {
         <section className="space-y-12">
           <div className="text-center space-y-2">
             <h2 className="text-3xl font-headline text-gold italic">Inspiração para os padrinhos</h2>
-            <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground/60">Cinza + branco + fúcsia</p>
+            <p className="text-xs tracking-[0.3em] uppercase text-muted-foreground/60">{settings?.padrinhosSubtitle || 'Cinza + branco + fúcsia'}</p>
           </div>
 
-          <div className="max-w-md mx-auto aspect-square relative rounded-3xl overflow-hidden border border-primary/5 shadow-sm">
-            <Image 
-              src={padrinhosImages[0]?.imageUrl || "https://images.unsplash.com/photo-1594932224828-b4b059b6f68e?q=80&w=800&auto=format&fit=crop"} 
-              fill 
-              className="object-cover" 
-              alt="Inspiração Padrinhos" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {padrinhosImages.length > 0 ? (
+              padrinhosImages.map((img) => (
+                <div key={img.id} className="aspect-[3/4] relative rounded-2xl overflow-hidden border border-primary/5 shadow-sm group">
+                  <Image src={img.imageUrl} fill className="object-cover group-hover:scale-105 transition-transform duration-700" alt="Inspiração Padrinho" />
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full max-w-md mx-auto aspect-square relative rounded-3xl overflow-hidden border border-primary/5 shadow-sm">
+                <Image 
+                  src="https://images.unsplash.com/photo-1594932224828-b4b059b6f68e?q=80&w=800&auto=format&fit=crop" 
+                  fill 
+                  className="object-cover" 
+                  alt="Inspiração Padrinhos" 
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-center space-y-6">
-            <p className="text-sm font-light text-muted-foreground italic">Acessórios em Fúcsia</p>
+            <p className="text-sm font-light text-muted-foreground italic">Referência do Traje</p>
             <div className="flex gap-6">
               {[
-                { hex: '#4A4A4A', label: 'Terno Cinza' },
-                { hex: '#FFFFFF', label: 'Camisa Branca' },
-                { hex: '#C21E56', label: 'Gravata Fúcsia' }
+                { hex: settings?.padrinhosColors?.primary || '#4A4A4A', label: 'Terno' },
+                { hex: settings?.padrinhosColors?.neutral || '#FFFFFF', label: 'Camisa' },
+                { hex: settings?.padrinhosColors?.accent || '#C21E56', label: 'Gravata' }
               ].map((color, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   <div className="w-12 h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
@@ -209,18 +226,24 @@ export default function ManualPadrinhosPage() {
         <section className="bg-primary/5 rounded-[3rem] p-12 text-center space-y-8 border border-primary/10">
           <h2 className="text-3xl font-headline text-gold">Preparamos um mimo...</h2>
           <div className="space-y-6 font-light text-muted-foreground leading-relaxed">
-            <p className="italic">Como forma de agradecer por aceitarem caminhar conosco, escolhemos um pequeno detalhe:</p>
-            <div className="space-y-4">
-              <div>
-                <p className="text-gold font-medium uppercase tracking-widest text-xs mb-1">Para as Madrinhas</p>
-                <p className="italic">Um porta-joias para guardar memórias preciosas.</p>
-              </div>
-              <div className="w-8 h-[1px] bg-gold/20 mx-auto"></div>
-              <div>
-                <p className="text-gold font-medium uppercase tracking-widest text-xs mb-1">Para os Padrinhos</p>
-                <p className="italic">A gravata para ser usada em nosso dia.</p>
-              </div>
-            </div>
+            {settings?.mimoText ? (
+              <p className="italic whitespace-pre-wrap">{settings.mimoText}</p>
+            ) : (
+              <>
+                <p className="italic">Como forma de agradecer por aceitarem caminhar conosco, escolhemos um pequeno detalhe:</p>
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-gold font-medium uppercase tracking-widest text-xs mb-1">Para as Madrinhas</p>
+                    <p className="italic">Um porta-joias para guardar memórias preciosas.</p>
+                  </div>
+                  <div className="w-8 h-[1px] bg-gold/20 mx-auto"></div>
+                  <div>
+                    <p className="text-gold font-medium uppercase tracking-widest text-xs mb-1">Para os Padrinhos</p>
+                    <p className="italic">A gravata para ser usada em nosso dia.</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <div className="pt-8">
             <p className="font-headline text-2xl text-gold italic">Com amor, Felipe & Rayssa</p>
