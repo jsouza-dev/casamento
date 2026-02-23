@@ -95,7 +95,7 @@ export default function ManualPadrinhosPage() {
       <div className="max-w-3xl mx-auto px-6 py-24 space-y-32">
         
         {/* Section 1: Capa */}
-        <section className="min-h-[70vh] flex flex-col items-center justify-center text-center space-y-12 animate-in fade-in duration-1000">
+        <section className="min-h-[60vh] flex flex-col items-center justify-center text-center space-y-12 animate-in fade-in duration-1000">
           <div className="space-y-4">
             <p className="text-xs tracking-[0.5em] uppercase text-muted-foreground/60 font-light">Especialmente para vocês</p>
             <h1 className="text-5xl md:text-7xl font-headline text-gold leading-tight">
@@ -103,12 +103,6 @@ export default function ManualPadrinhosPage() {
             </h1>
           </div>
           <Monogram showDate />
-          <div className="opacity-40 max-w-[200px] grayscale brightness-110">
-             <Image 
-              src={settings?.coverImageUrl || "https://images.unsplash.com/photo-1522673607200-1648832cee98?q=80&w=200&auto=format&fit=crop"} 
-              width={200} height={100} alt="Floral" className="mix-blend-multiply object-contain" 
-            />
-          </div>
         </section>
 
         {/* Section 2: Mensagem */}
@@ -166,7 +160,7 @@ export default function ManualPadrinhosPage() {
               {[
                 { hex: settings?.madrinhasColors?.primary || '#C21E56', label: 'Vibrante' },
                 { hex: settings?.madrinhasColors?.secondary || '#8B0044', label: 'Fechado' },
-                { hex: settings?.madrinhasColors?.tertiary || '#E0115F', label: 'Suave' }
+                { hex: settings?.madrinhasColors?.third || settings?.madrinhasColors?.tertiary || '#E0115F', label: 'Suave' }
               ].map((color, i) => (
                 <div key={i} className="flex flex-col items-center gap-2">
                   <div className="w-12 h-12 rounded-full border-2 border-white shadow-md" style={{ backgroundColor: color.hex }}></div>
