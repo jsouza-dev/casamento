@@ -121,8 +121,10 @@ export function InvitationContent({ onBack }: InvitationContentProps) {
         className="fade-in-section space-y-8 max-w-xl mx-auto"
       >
         <div className="text-center space-y-4">
-          <h2 className="text-3xl font-headline text-gold">RSVP</h2>
-          <p className="font-light text-muted-foreground">Confirme sua presença até o dia 21 de fevereiro de 2026.</p>
+          <h2 className="text-3xl font-headline text-gold">Confirme sua presença</h2>
+          <p className="font-light text-muted-foreground text-xl">
+            Por favor, realize sua confirmação até o dia <span className="font-bold text-gold border-b border-gold/30 pb-1">14 de Março de 2026</span>.
+          </p>
         </div>
         <RSVPForm />
       </section>
