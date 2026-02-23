@@ -13,57 +13,93 @@ interface MusicPlayerProps {
 export function MusicPlayer({ playOnOpen }: MusicPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const playerRef = useRef<any>(null);
 
   useEffect(() => {
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    const firstScriptTag = document.getElementsByTagName('script')[0];
-    firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    setIsMounted(true);
 
-    (window as any).onYouTubeIframeAPIReady = () => {
-      playerRef.current = new (window as any).YT.Player('youtube-player', {
-        height: '0',
-        width: '0',
-        videoId: 'IQavyVVJmvo',
-        playerVars: {
-          autoplay: 0,
-          loop: 1,
-          playlist: 'IQavyVVJmvo',
-          controls: 0,
-          showinfo: 0,
-          modestbranding: 1,
-        },
-        events: {
-          onReady: (event: any) => {
-            event.target.setVolume(40);
-            setIsReady(true);
+    const initPlayer = () => {
+      if (playerRef.current) return;
+      
+      try {
+        playerRef.current = new (window as any).YT.Player('youtube-player', {
+          height: '0',
+          width: '0',
+          videoId: 'IQavyVVJmvo',
+          playerVars: {
+            autoplay: 0,
+            loop: 1,
+            playlist: 'IQavyVVJmvo',
+            controls: 0,
+            showinfo: 0,
+            modestbranding: 1,
           },
-        },
-      });
+          events: {
+            onReady: (event: any) => {
+              event.target.setVolume(40);
+              setIsReady(true);
+            },
+            onError: (e: any) => {
+              console.error("YouTube Player Error:", e);
+            }
+          },
+        });
+      } catch (err) {
+        console.error("Failed to initialize YouTube player:", err);
+      }
     };
+
+    // Load YouTube API script safely if not already present
+    if (typeof document !== 'undefined' && !document.getElementById('youtube-api-script')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-api-script';
+      tag.src = "https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    }
+
+    if (typeof window !== 'undefined') {
+      if ((window as any).YT && (window as any).YT.Player) {
+        initPlayer();
+      } else {
+        (window as any).onYouTubeIframeAPIReady = initPlayer;
+      }
+    }
   }, []);
 
   useEffect(() => {
     if (playOnOpen && isReady && playerRef.current) {
-      playerRef.current.playVideo();
-      setIsPlaying(true);
+      try {
+        playerRef.current.playVideo();
+        setIsPlaying(true);
+      } catch (e) {
+        // Silently fail if autoplay is blocked or player state is invalid
+      }
     }
   }, [playOnOpen, isReady]);
 
   const toggleMusic = () => {
-    if (!playerRef.current) return;
-    if (isPlaying) {
-      playerRef.current.pauseVideo();
-    } else {
-      playerRef.current.playVideo();
+    if (!playerRef.current || !isReady) return;
+    
+    try {
+      if (isPlaying) {
+        playerRef.current.pauseVideo();
+      } else {
+        playerRef.current.playVideo();
+      }
+      setIsPlaying(!isPlaying);
+    } catch (e) {
+      console.error("Toggle music error:", e);
     }
-    setIsPlaying(!isPlaying);
   };
+
+  if (!isMounted) return null;
 
   return (
     <>
-      <div id="youtube-player" className="hidden" />
+      <div className="hidden" aria-hidden="true">
+        <div id="youtube-player" />
+      </div>
       <Button
         variant="ghost"
         size="icon"

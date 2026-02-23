@@ -11,10 +11,18 @@ export default function Home() {
 
   return (
     <main className="min-h-screen relative bg-[#F8F6F2]">
-      {!isOpen && <OpeningScreen onOpen={() => setIsOpen(true)} />}
+      {!isOpen && (
+        <OpeningScreen 
+          key="opening-screen" 
+          onOpen={() => setIsOpen(true)} 
+        />
+      )}
       
       {isOpen && (
-        <div className="animate-in fade-in slide-in-from-bottom-10 duration-1000">
+        <div 
+          key="invitation-container"
+          className="animate-in fade-in slide-in-from-bottom-10 duration-1000"
+        >
           <InvitationContent />
         </div>
       )}
