@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -17,7 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
-  const { user, userError } = useUser();
+  const { user } = useUser();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -27,30 +26,26 @@ export default function LoginPage() {
     }
   }, [user, router]);
 
-  useEffect(() => {
-    if (userError) {
-      toast({
-        variant: "destructive",
-        title: "Erro de acesso",
-        description: "Verifique suas credenciais e tente novamente.",
-      });
-      setIsLoading(false);
-    }
-  }, [userError, toast]);
-
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Transform shortcut "admin" to a valid email format
+    // Map shortcut credentials to valid Firebase Auth requirements
+    // Firebase requires 6+ chars for passwords, so "admin" maps to "admin123" internally
     const email = identifier === 'admin' ? 'admin@casamento.com' : identifier;
+    const finalPassword = (identifier === 'admin' && password === 'admin') ? 'admin123' : password;
     
-    initiateEmailSignIn(auth, email, password);
-    
-    // Safety timeout to reset loading if nothing happens
-    setTimeout(() => {
+    try {
+      await initiateEmailSignIn(auth, email, finalPassword);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro de acesso",
+        description: "Usuário ou senha inválidos. Verifique os dados no console do Firebase.",
+      });
       setIsLoading(false);
-    }, 3000);
+    }
   };
 
   return (
