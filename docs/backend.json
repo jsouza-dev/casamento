@@ -1,0 +1,235 @@
+{
+  "entities": {
+    "Gift": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Gift",
+      "type": "object",
+      "description": "Represents a gift item that guests can view and contribute to, managed through the admin panel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Gift entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the gift item."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the gift item."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the gift item in Brazilian Reais (R$). Decimal type."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the image associated with the gift item, stored in object storage.",
+          "format": "uri"
+        },
+        "externalLink": {
+          "type": "string",
+          "description": "External URL where the gift can be purchased or contributed to.",
+          "format": "uri"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the gift item was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "price",
+        "imageUrl",
+        "externalLink",
+        "createdAt"
+      ]
+    },
+    "Rsvp": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rsvp",
+      "type": "object",
+      "description": "Captures guest attendance confirmations and related details for the wedding event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RSVP confirmation."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the guest confirming presence."
+        },
+        "isAttending": {
+          "type": "boolean",
+          "description": "Indicates whether the guest will be attending the event."
+        },
+        "numberOfGuests": {
+          "type": "number",
+          "description": "The number of additional guests accompanying the primary guest. Excludes the primary guest."
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Contact phone number of the guest."
+        },
+        "message": {
+          "type": "string",
+          "description": "An optional message from the guest."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when the RSVP confirmation was submitted.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "isAttending",
+        "numberOfGuests",
+        "phoneNumber",
+        "createdAt"
+      ]
+    },
+    "EventSetting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EventSetting",
+      "type": "object",
+      "description": "Stores global configuration and details for the wedding event, such as couple's names, date, venue, and essential links.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the EventSetting entity. Expected to be a singleton (e.g., 'main_settings')."
+        },
+        "groomName": {
+          "type": "string",
+          "description": "The full name of the groom."
+        },
+        "brideName": {
+          "type": "string",
+          "description": "The full name of the bride."
+        },
+        "eventDateTime": {
+          "type": "string",
+          "description": "The full date and time of the wedding event.",
+          "format": "date-time"
+        },
+        "verseText": {
+          "type": "string",
+          "description": "The text of the wedding Bible verse."
+        },
+        "verseReference": {
+          "type": "string",
+          "description": "The reference for the wedding Bible verse (e.g., 'Salmos 126:1-2')."
+        },
+        "locationName": {
+          "type": "string",
+          "description": "The name of the wedding venue."
+        },
+        "locationAddress": {
+          "type": "string",
+          "description": "The physical address of the wedding venue."
+        },
+        "mapEmbedUrl": {
+          "type": "string",
+          "description": "The URL for embedding the Google Maps location of the venue.",
+          "format": "uri"
+        },
+        "godparentsLink": {
+          "type": "string",
+          "description": "The URL for the exclusive area for godparents.",
+          "format": "uri"
+        },
+        "backgroundMusicUrl": {
+          "type": "string",
+          "description": "The YouTube URL for the background music, embedded in the invitation.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "groomName",
+        "brideName",
+        "eventDateTime",
+        "verseText",
+        "verseReference",
+        "locationName",
+        "locationAddress",
+        "mapEmbedUrl",
+        "godparentsLink",
+        "backgroundMusicUrl"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/gifts/{giftId}",
+        "definition": {
+          "entityName": "Gift",
+          "schema": {
+            "$ref": "#/backend/entities/Gift"
+          },
+          "description": "Stores individual gift items available on the wedding registry. These documents are publicly readable by all guests, allowing them to view available gifts. Only authenticated administrators (verified via the `/roles_admin` collection) are authorized to create, update, or delete gift items. This structure supports secure `list` operations for guests and ensures Authorization Independence as gift access does not depend on parent documents.",
+          "params": [
+            {
+              "name": "giftId",
+              "description": "The unique identifier for a specific gift item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rsvps/{rsvpId}",
+        "definition": {
+          "entityName": "Rsvp",
+          "schema": {
+            "$ref": "#/backend/entities/Rsvp"
+          },
+          "description": "Stores guest RSVP confirmations for the wedding event. Guests can create (write) new RSVP documents for themselves, but cannot read, update, or delete other RSVPs. Only authenticated administrators (verified via `/roles_admin`) have full read, list, and delete access to all RSVP entries. This structure ensures guest privacy and enables secure admin management, supporting Authorization Independence as no hierarchical lookups are needed.",
+          "params": [
+            {
+              "name": "rsvpId",
+              "description": "The unique identifier for a specific RSVP confirmation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/event_settings/main_settings",
+        "definition": {
+          "entityName": "EventSetting",
+          "schema": {
+            "$ref": "#/backend/entities/EventSetting"
+          },
+          "description": "A singleton document storing global configuration and details for the wedding event. This document is publicly readable by all guests to display event information. Only authenticated administrators (verified via `/roles_admin`) are authorized to update its contents. The fixed ID 'main_settings' ensures predictable access and Authorization Independence.",
+          "params": []
+        }
+      },
+      {
+        "path": "/roles_admin/{adminId}",
+        "definition": {
+          "entityName": "admin",
+          "schema": {
+            "$ref": "#/backend/entities/user"
+          },
+          "description": "A collection used for Database Access Control (DBAC) to identify users with administrative privileges. The document ID (`adminId`) corresponds to the Firebase Authentication `uid` of an administrator. The presence of a document at `/roles_admin/{request.auth.uid}` grants admin access. This approach adheres to Authorization Independence by providing a direct lookup for admin roles, eliminating `get()` dependencies on other data for core authorization.",
+          "params": [
+            {
+              "name": "adminId",
+              "description": "The unique Firebase Authentication UID of a user granted administrative privileges."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to be secure, scalable, and easily debuggable, adhering strictly to the core design principles and strategy mandates. \n\n**Authorization Independence (CRITICAL):** Authorization independence is achieved by ensuring that security rules do not rely on `get()` calls to other documents for authorization decisions. Instead, access is determined by the document's path, its presence in a specific collection, or the `request.auth.uid` in conjunction with a dedicated `/roles_admin` collection. For instance, `/gifts/{giftId}` documents are publicly readable, with write access granted only if `request.auth.uid` is present in `/roles_admin/{adminId}`. This avoids hierarchical dependencies, enabling atomic operations and simplifying rule logic.\n\n**QAPs (Queries Are Not Filters):** The structure explicitly supports secure `list` operations. \n*   The `/gifts` collection has a homogeneous security posture: all documents are publicly readable by guests, and writable only by administrators. This allows guests to perform `list` queries on `/gifts` without needing server-side filtering, as all returned documents are legitimately accessible to them. \n*   The `/rsvps` collection is designed for guests to `create` entries. Guests are explicitly prevented from `read` or `list` other RSVPs, ensuring privacy and preventing data exposure. Administrators, verified via the `/roles_admin` collection, have full `read` and `list` access, which is secure because only authorized individuals can perform these operations.\n\n**Structural Segregation:** Each collection (`/gifts`, `/rsvps`, `/event_settings`, `/roles_admin`) maintains a homogeneous security posture. This means all documents within a given collection share the same access requirements, eliminating the need for complex, conditional logic within security rules and making them easier to write and debug.\n\n**Access Modeling:**\n*   **Global Roles (DBAC):** Admin access is managed using the `/roles_admin/{adminId}` collection. The mere existence of a document where `adminId` matches `request.auth.uid` grants administrative privileges. This leverages Firebase Auth UIDs directly for role-based access control without custom claims.\n*   **Path-Based Ownership:** While not strictly 'user-owned' in the traditional sense, `/rsvps/{rsvpId}` allows guests to create their own unique RSVP. The primary ownership/management for all RSVPs resides with the designated administrators.\n\n**Data Clarity and Predictability:** Semantic path names like `/gifts/{giftId}` and `/roles_admin/{adminId}` are used, and parameters are descriptively named. The `EventSetting` entity is implemented as a singleton document at `/event_settings/main_settings` for predictable access to global configuration."
+  }
+}
