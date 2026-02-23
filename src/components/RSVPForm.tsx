@@ -1,11 +1,10 @@
-
 'use client';
 
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -14,6 +13,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -23,24 +23,57 @@ import { useToast } from '@/hooks/use-toast';
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   attending: z.enum(["yes", "no"], { required_error: "Por favor, selecione uma opção." }),
-  guests: z.string().optional(),
+  guestsCount: z.coerce.number().min(0).max(10, { message: "Limite de 10 acompanhantes." }).default(0),
+  guestNames: z.array(z.object({
+    name: z.string().min(2, { message: "Informe o nome do acompanhante." })
+  })).optional(),
   phone: z.string().min(10, { message: "Por favor, insira um telefone válido." }),
   message: z.string().optional(),
 });
+
+type FormValues = z.infer<typeof formSchema>;
 
 export function RSVPForm() {
   const [submitted, setSubmitted] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultVariants: {
+    defaultValues: {
+      name: "",
       attending: "yes",
-      guests: "0",
+      guestsCount: 0,
+      guestNames: [],
+      phone: "",
+      message: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: "guestNames",
+  });
+
+  const guestsCount = form.watch("guestsCount");
+  const attending = form.watch("attending");
+
+  // Synchronize guestNames array with guestsCount
+  useEffect(() => {
+    const currentCount = fields.length;
+    const targetCount = attending === 'yes' ? guestsCount : 0;
+
+    if (targetCount > currentCount) {
+      for (let i = currentCount; i < targetCount; i++) {
+        append({ name: "" });
+      }
+    } else if (targetCount < currentCount) {
+      for (let i = currentCount; i > targetCount; i--) {
+        remove(i - 1);
+      }
+    }
+  }, [guestsCount, attending, fields.length, append, remove]);
+
+  async function onSubmit(values: FormValues) {
     try {
       // Simulating database submission
       await new Promise(resolve => setTimeout(resolve, 1500));
@@ -80,9 +113,9 @@ export function RSVPForm() {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-light">Nome Completo</FormLabel>
+                <FormLabel className="font-light">Seu Nome Completo</FormLabel>
                 <FormControl>
-                  <Input placeholder="Seu nome" {...field} className="border-primary/10 focus-visible:ring-primary/20" />
+                  <Input placeholder="Como quer ser chamado?" {...field} className="border-primary/10 focus-visible:ring-primary/20" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -94,7 +127,7 @@ export function RSVPForm() {
             name="attending"
             render={({ field }) => (
               <FormItem className="space-y-3">
-                <FormLabel className="font-light">Confirmará presença?</FormLabel>
+                <FormLabel className="font-light">Você poderá comparecer?</FormLabel>
                 <FormControl>
                   <RadioGroup
                     onValueChange={field.onChange}
@@ -111,7 +144,7 @@ export function RSVPForm() {
                       <FormControl>
                         <RadioGroupItem value="no" />
                       </FormControl>
-                      <FormLabel className="font-light">Infelizmente não poderei comparecer</FormLabel>
+                      <FormLabel className="font-light">Infelizmente não poderei ir</FormLabel>
                     </FormItem>
                   </RadioGroup>
                 </FormControl>
@@ -120,26 +153,64 @@ export function RSVPForm() {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="guests"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="font-light">Número de acompanhantes</FormLabel>
-                <FormControl>
-                  <Input type="number" min="0" {...field} className="border-primary/10 focus-visible:ring-primary/20" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {attending === 'yes' && (
+            <>
+              <FormField
+                control={form.control}
+                name="guestsCount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-light">Quantos acompanhantes levará?</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min="0" 
+                        max="10" 
+                        {...field} 
+                        className="border-primary/10 focus-visible:ring-primary/20" 
+                      />
+                    </FormControl>
+                    <FormDescription className="text-xs">Não conte com você mesmo.</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {fields.length > 0 && (
+                <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <p className="text-sm font-medium text-gold flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" /> Nomes dos Acompanhantes
+                  </p>
+                  {fields.map((field, index) => (
+                    <FormField
+                      key={field.id}
+                      control={form.control}
+                      name={`guestNames.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input 
+                              placeholder={`Nome do acompanhante ${index + 1}`} 
+                              {...field} 
+                              className="border-primary/10 focus-visible:ring-primary/20" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
           <FormField
             control={form.control}
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-light">Telefone</FormLabel>
+                <FormLabel className="font-light">Seu Telefone / WhatsApp</FormLabel>
                 <FormControl>
                   <Input placeholder="(00) 00000-0000" {...field} className="border-primary/10 focus-visible:ring-primary/20" />
                 </FormControl>
@@ -153,16 +224,16 @@ export function RSVPForm() {
             name="message"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="font-light">Mensagem opcional</FormLabel>
+                <FormLabel className="font-light">Recado para os noivos (Opcional)</FormLabel>
                 <FormControl>
-                  <Textarea placeholder="Deixe um recado para os noivos" {...field} className="border-primary/10 focus-visible:ring-primary/20 min-h-[100px]" />
+                  <Textarea placeholder="Deixe uma mensagem carinhosa..." {...field} className="border-primary/10 focus-visible:ring-primary/20 min-h-[100px]" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
 
-          <Button type="submit" disabled={form.formState.isSubmitting} className="w-full bg-gold hover:bg-gold/90 text-white font-light py-6 rounded-full">
+          <Button type="submit" disabled={form.formState.isSubmitting} className="w-full bg-gold hover:bg-gold/90 text-white font-light py-6 rounded-full transition-all">
             {form.formState.isSubmitting ? "Enviando..." : "Confirmar Presença"}
           </Button>
         </form>
