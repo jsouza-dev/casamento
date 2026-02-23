@@ -26,7 +26,7 @@ import { doc, collection } from 'firebase/firestore';
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   attending: z.enum(["yes", "no"], { required_error: "Por favor, selecione uma opção." }),
-  guestsCount: z.coerce.number().min(0).max(10, { message: "Limite de 10 acompanhantes." }).default(0),
+  guestsCount: z.coerce.number().min(0).max(1, { message: "Limite de 1 acompanhante." }).default(0),
   guestNames: z.array(z.object({
     name: z.string().min(2, { message: "Informe o nome do acompanhante." })
   })).optional(),
@@ -177,17 +177,17 @@ export function RSVPForm() {
                 name="guestsCount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="font-light">Quantos acompanhantes levará?</FormLabel>
+                    <FormLabel className="font-light">Levará acompanhante?</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
                         min="0" 
-                        max="10" 
+                        max="1" 
                         {...field} 
                         className="border-primary/10 focus-visible:ring-primary/20" 
                       />
                     </FormControl>
-                    <FormDescription className="text-xs">Não conte com você mesmo.</FormDescription>
+                    <FormDescription className="text-xs">Máximo de 1 acompanhante. Não conte com você mesmo.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -196,7 +196,7 @@ export function RSVPForm() {
               {fields.length > 0 && (
                 <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                   <p className="text-sm font-medium text-gold flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" /> Nomes dos Acompanhantes
+                    <UserPlus className="h-4 w-4" /> Nome do Acompanhante
                   </p>
                   {fields.map((field, index) => (
                     <FormField
@@ -207,7 +207,7 @@ export function RSVPForm() {
                         <FormItem>
                           <FormControl>
                             <Input 
-                              placeholder={`Nome do acompanhante ${index + 1}`} 
+                              placeholder={`Nome do acompanhante`} 
                               {...field} 
                               className="border-primary/10 focus-visible:ring-primary/20" 
                             />
