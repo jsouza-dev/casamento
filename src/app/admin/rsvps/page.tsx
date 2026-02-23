@@ -53,11 +53,11 @@ export default function RSVPsPage() {
   const { data: invitees, isLoading: isLoadingInvitees } = useCollection(inviteesQuery);
 
   const filteredRsvps = rsvps?.filter(rsvp => 
-    rsvp.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+    rsvp.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredInvitees = invitees?.filter(invitee => 
-    invitee.fullName.toLowerCase().includes(searchTerm.toLowerCase())
+    invitee.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleDelete = (id: string, path: 'rsvps' | 'invitees') => {
@@ -261,7 +261,7 @@ export default function RSVPsPage() {
         ];
       }
       
-      const rsvpMatch = rsvps?.find(r => r.fullName.toLowerCase().trim() === item.fullName.toLowerCase().trim());
+      const rsvpMatch = rsvps?.find(r => r.fullName?.toLowerCase().trim() === item.fullName?.toLowerCase().trim());
       const status = rsvpMatch 
         ? (rsvpMatch.isAttending ? "Confirmado" : "Recusado")
         : "Pendente";
@@ -281,8 +281,8 @@ export default function RSVPsPage() {
   };
 
   const getRsvpStatus = (fullName: string) => {
-    if (!rsvps) return null;
-    return rsvps.find(r => r.fullName.toLowerCase().trim() === fullName.toLowerCase().trim());
+    if (!rsvps || !fullName) return null;
+    return rsvps.find(r => r.fullName?.toLowerCase().trim() === fullName.toLowerCase().trim());
   };
 
   return (
@@ -507,7 +507,7 @@ export default function RSVPsPage() {
               <div className="space-y-2">
                 <Label>Nome Completo</Label>
                 <Input 
-                  value={editingInvitee.fullName} 
+                  value={editingInvitee.fullName || ''} 
                   onChange={(e) => setEditingInvitee({...editingInvitee, fullName: e.target.value})}
                 />
               </div>
@@ -515,7 +515,7 @@ export default function RSVPsPage() {
                 <div className="space-y-2">
                   <Label>Telefone</Label>
                   <Input 
-                    value={editingInvitee.phoneNumber} 
+                    value={editingInvitee.phoneNumber || ''} 
                     onChange={(e) => setEditingInvitee({...editingInvitee, phoneNumber: e.target.value})}
                   />
                 </div>
@@ -524,7 +524,7 @@ export default function RSVPsPage() {
                   <Input 
                     type="number"
                     min="1"
-                    value={editingInvitee.guestLimit} 
+                    value={editingInvitee.guestLimit ?? 1} 
                     onChange={(e) => setEditingInvitee({...editingInvitee, guestLimit: e.target.value})}
                   />
                 </div>
@@ -532,7 +532,7 @@ export default function RSVPsPage() {
               <div className="space-y-2">
                 <Label>Categoria</Label>
                 <Input 
-                  value={editingInvitee.category} 
+                  value={editingInvitee.category || ''} 
                   onChange={(e) => setEditingInvitee({...editingInvitee, category: e.target.value})}
                 />
               </div>
