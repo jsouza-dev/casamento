@@ -101,27 +101,20 @@ export function RSVPForm() {
     setIsVerifying(true);
     const normalizedSearch = nameInput.toLowerCase().trim();
     
-    // Check if already confirmed
-    const hasConfirmed = allRsvps?.some(r => r.fullName?.toLowerCase().trim() === normalizedSearch);
-    if (hasConfirmed) {
-      setAlreadyConfirmed(true);
-      setInviteeMatch(null);
-      setIsVerifying(false);
-      return;
-    } else {
-      setAlreadyConfirmed(false);
-    }
-
+    // Check if name is in the invitee list first
     const match = allInvitees.find(inv => {
       const normalizedInDB = inv.fullName.toLowerCase().trim();
-      return normalizedInDB === normalizedSearch || normalizedInDB.includes(normalizedSearch);
+      return normalizedInDB === normalizedSearch;
     });
 
     if (match) {
       setInviteeMatch(match);
-      form.setValue('guestsCount', "0");
+      // Now check if already confirmed
+      const hasConfirmed = allRsvps?.some(r => r.fullName?.toLowerCase().trim() === normalizedSearch);
+      setAlreadyConfirmed(!!hasConfirmed);
     } else {
       setInviteeMatch(null);
+      setAlreadyConfirmed(false);
     }
     setIsVerifying(false);
   };
@@ -202,7 +195,7 @@ export function RSVPForm() {
                 <FormControl>
                   <div className="relative">
                     <Input 
-                      placeholder="Exatamente como no convite" 
+                      placeholder="Nome como está no convite" 
                       {...field} 
                       onBlur={handleVerifyName}
                       className="border-primary/10 focus-visible:ring-primary/20 pr-10" 
@@ -220,16 +213,18 @@ export function RSVPForm() {
                   </div>
                 </FormControl>
                 {alreadyConfirmed ? (
-                  <p className="text-[10px] text-destructive flex items-center gap-1 mt-1">
-                    <Ban className="h-3 w-3" /> Presença já confirmada para este nome.
-                  </p>
+                  <div className="bg-red-50 p-2 rounded border border-red-100 mt-2">
+                    <p className="text-[11px] text-red-600 font-medium flex items-center gap-1.5">
+                      <Ban className="h-3.5 w-3.5" /> Presença já confirmada para este nome.
+                    </p>
+                  </div>
                 ) : inviteeMatch ? (
-                  <p className="text-[10px] text-green-600 flex items-center gap-1 mt-1">
+                  <p className="text-[10px] text-green-600 flex items-center gap-1 mt-1 font-medium">
                     <CheckCircle2 className="h-3 w-3" /> Convidado localizado. Convite para {inviteeMatch.guestLimit} pessoa(s).
                   </p>
                 ) : nameInput.length > 2 && !isVerifying && (
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1 mt-1">
-                    <AlertCircle className="h-3 w-3" /> Verifique se o nome está correto.
+                    <AlertCircle className="h-3 w-3" /> Digite seu nome e clique na lupa para validar.
                   </p>
                 )}
                 <FormMessage />
@@ -278,7 +273,7 @@ export function RSVPForm() {
                       value={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger className="border-primary/10 focus:ring-primary/20">
+                        <SelectTrigger className="border-primary/10 focus:ring-primary/20 bg-white">
                           <SelectValue placeholder="Selecione a quantidade" />
                         </SelectTrigger>
                       </FormControl>
@@ -290,7 +285,7 @@ export function RSVPForm() {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormDescription className="text-xs">
+                    <FormDescription className="text-[11px] italic">
                       Seu convite permite até {maxAccompaniments} acompanhante(s).
                     </FormDescription>
                     <FormMessage />
@@ -310,7 +305,7 @@ export function RSVPForm() {
                         name={`guestNames.${index}.name`}
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-xs">Nome do acompanhante {index + 1}</FormLabel>
+                            <FormLabel className="text-[11px] uppercase tracking-wider text-muted-foreground">Nome do acompanhante {index + 1}</FormLabel>
                             <FormControl>
                               <Input 
                                 placeholder="Nome completo" 
@@ -335,13 +330,13 @@ export function RSVPForm() {
                               >
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                   <FormControl><RadioGroupItem value="adult" /></FormControl>
-                                  <FormLabel className="font-light text-xs flex items-center gap-1">
+                                  <FormLabel className="font-light text-xs flex items-center gap-1 cursor-pointer">
                                     <User className="h-3 w-3" /> Adulto
                                   </FormLabel>
                                 </FormItem>
                                 <FormItem className="flex items-center space-x-2 space-y-0">
                                   <FormControl><RadioGroupItem value="child" /></FormControl>
-                                  <FormLabel className="font-light text-xs flex items-center gap-1">
+                                  <FormLabel className="font-light text-xs flex items-center gap-1 cursor-pointer">
                                     <Baby className="h-3 w-3" /> Criança
                                   </FormLabel>
                                 </FormItem>
@@ -395,7 +390,7 @@ export function RSVPForm() {
           <Button 
             type="submit" 
             disabled={form.formState.isSubmitting || isVerifying || alreadyConfirmed || !inviteeMatch} 
-            className="w-full bg-gold hover:bg-gold/90 text-white font-light py-6 rounded-full transition-all"
+            className="w-full bg-gold hover:bg-gold/90 text-white font-light py-6 rounded-full transition-all text-base"
           >
             {form.formState.isSubmitting ? "Enviando..." : alreadyConfirmed ? "Presença já confirmada" : "Confirmar Presença"}
           </Button>
