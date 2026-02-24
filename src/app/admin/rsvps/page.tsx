@@ -92,11 +92,11 @@ export default function RSVPsPage() {
   // Delete State
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, path: 'rsvps' | 'invitees' } | null>(null);
 
-  // Edit Invitee State
+  // Edit/New Invitee State
   const [editingInvitee, setEditingInvitee] = useState<any>(null);
   const [isInviteeDialogOpen, setIsInviteeDialogOpen] = useState(false);
 
-  // Edit RSVP State
+  // Edit/New RSVP State
   const [editingRsvp, setEditingRsvp] = useState<any>(null);
   const [isRsvpEditDialogOpen, setIsRsvpEditDialogOpen] = useState(false);
 
@@ -141,6 +141,16 @@ export default function RSVPsPage() {
     }, 100);
   };
 
+  const openNewInvitee = () => {
+    setEditingInvitee({
+      fullName: '',
+      phoneNumber: '',
+      category: 'Geral',
+      guestLimit: 1
+    });
+    setIsInviteeDialogOpen(true);
+  };
+
   const openEditInvitee = (invitee: any) => {
     setTimeout(() => {
       setEditingInvitee({ ...invitee });
@@ -148,9 +158,20 @@ export default function RSVPsPage() {
     }, 100);
   };
 
+  const openNewRsvp = () => {
+    setEditingRsvp({
+      fullName: '',
+      isAttending: true,
+      numberOfGuests: 0,
+      guestNames: [],
+      phoneNumber: '',
+      message: ''
+    });
+    setIsRsvpEditDialogOpen(true);
+  };
+
   const openEditRsvp = (rsvp: any) => {
     setTimeout(() => {
-      // Normalizar guestNames para o novo formato de objeto se for string
       const normalizedGuests = (rsvp.guestNames || []).map((g: any) => 
         typeof g === 'string' ? { name: g, type: 'adult' } : g
       );
@@ -169,23 +190,40 @@ export default function RSVPsPage() {
   };
 
   const saveInviteeChanges = () => {
-    if (!editingInvitee) return;
-    const docRef = doc(db, 'invitees', editingInvitee.id);
-    updateDocumentNonBlocking(docRef, {
+    if (!editingInvitee || !editingInvitee.fullName) {
+      toast({ variant: "destructive", title: "Nome é obrigatório" });
+      return;
+    }
+
+    const data = {
       fullName: editingInvitee.fullName,
       phoneNumber: editingInvitee.phoneNumber || "",
       category: editingInvitee.category || "Geral",
       guestLimit: Number(editingInvitee.guestLimit) || 1,
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    if (editingInvitee.id) {
+      const docRef = doc(db, 'invitees', editingInvitee.id);
+      updateDocumentNonBlocking(docRef, data);
+      toast({ title: "Convidado atualizado" });
+    } else {
+      addDocumentNonBlocking(collection(db, 'invitees'), {
+        ...data,
+        createdAt: new Date().toISOString()
+      });
+      toast({ title: "Convidado adicionado" });
+    }
     setIsInviteeDialogOpen(false);
-    toast({ title: "Convidado atualizado" });
   };
 
   const saveRsvpChanges = () => {
-    if (!editingRsvp) return;
-    const docRef = doc(db, 'rsvps', editingRsvp.id);
-    updateDocumentNonBlocking(docRef, {
+    if (!editingRsvp || !editingRsvp.fullName) {
+      toast({ variant: "destructive", title: "Nome é obrigatório" });
+      return;
+    }
+
+    const data = {
       fullName: editingRsvp.fullName,
       isAttending: editingRsvp.isAttending,
       numberOfGuests: Number(editingRsvp.numberOfGuests) || 0,
@@ -193,9 +231,20 @@ export default function RSVPsPage() {
       phoneNumber: editingRsvp.phoneNumber || "",
       message: editingRsvp.message || "",
       updatedAt: new Date().toISOString()
-    });
+    };
+
+    if (editingRsvp.id) {
+      const docRef = doc(db, 'rsvps', editingRsvp.id);
+      updateDocumentNonBlocking(docRef, data);
+      toast({ title: "Confirmação atualizada" });
+    } else {
+      addDocumentNonBlocking(collection(db, 'rsvps'), {
+        ...data,
+        createdAt: new Date().toISOString()
+      });
+      toast({ title: "Confirmação adicionada" });
+    }
     setIsRsvpEditDialogOpen(false);
-    toast({ title: "Confirmação atualizada" });
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,9 +367,14 @@ export default function RSVPsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10 border-primary/10" placeholder="Buscar confirmação..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
-              <Button onClick={() => exportPdf(filteredRsvps || [], "Lista de Confirmações")} variant="ghost" size="sm" className="text-gold">
-                <FileText className="mr-2 h-4 w-4" /> Exportar PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={openNewRsvp} variant="outline" size="sm" className="border-gold text-gold">
+                  <Plus className="mr-2 h-4 w-4" /> Nova Confirmação
+                </Button>
+                <Button onClick={() => exportPdf(filteredRsvps || [], "Lista de Confirmações")} variant="ghost" size="sm" className="text-gold">
+                  <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+                </Button>
+              </div>
             </div>
             
             {isLoadingRsvps ? (
@@ -394,9 +448,14 @@ export default function RSVPsPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10 border-primary/10" placeholder="Buscar na lista geral..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
-              <Button onClick={() => exportPdf(filteredInvitees || [], "Lista Geral de Convidados")} variant="ghost" size="sm" className="text-gold">
-                <FileText className="mr-2 h-4 w-4" /> Exportar PDF
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={openNewInvitee} variant="outline" size="sm" className="border-gold text-gold">
+                  <Plus className="mr-2 h-4 w-4" /> Novo Convidado
+                </Button>
+                <Button onClick={() => exportPdf(filteredInvitees || [], "Lista Geral de Convidados")} variant="ghost" size="sm" className="text-gold">
+                  <FileText className="mr-2 h-4 w-4" /> Exportar PDF
+                </Button>
+              </div>
             </div>
             
             {isLoadingInvitees ? (
@@ -489,10 +548,10 @@ export default function RSVPsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* RSVP Edit Dialog */}
+      {/* RSVP Edit/New Dialog */}
       <Dialog open={isRsvpEditDialogOpen} onOpenChange={(open) => !open && setIsRsvpEditDialogOpen(false)}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="text-gold">Editar Confirmação</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-gold">{editingRsvp?.id ? 'Editar Confirmação' : 'Nova Confirmação'}</DialogTitle></DialogHeader>
           {editingRsvp && (
             <div className="space-y-4 py-4">
               <div className="space-y-2">
@@ -557,10 +616,10 @@ export default function RSVPsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Invitee Dialog */}
+      {/* Edit/New Invitee Dialog */}
       <Dialog open={isInviteeDialogOpen} onOpenChange={(open) => !open && setIsInviteeDialogOpen(false)}>
         <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle className="text-gold">Editar Convidado</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-gold">{editingInvitee?.id ? 'Editar Convidado' : 'Novo Convidado'}</DialogTitle></DialogHeader>
           {editingInvitee && (
             <div className="space-y-4 py-4">
               <div className="space-y-2"><Label>Nome Completo</Label><Input value={editingInvitee.fullName || ''} onChange={(e) => setEditingInvitee({...editingInvitee, fullName: e.target.value})} /></div>
@@ -583,7 +642,7 @@ export default function RSVPsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Registro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta ação não pode ser desfeita. O convidado será removido permanentemente.</AlertDialogDescription>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. O registro será removido permanentemente.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
