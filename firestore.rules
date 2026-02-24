@@ -27,7 +27,6 @@ service cloud.firestore {
     }
 
     // --- Regra Global de Admin ---
-    // Administradores têm acesso total a qualquer documento.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -39,21 +38,20 @@ service cloud.firestore {
      */
     match /gifts/{giftId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description RSVPs: Convidados criam, Admin gerencia.
+     * @description RSVPs: Convidados criam e listam (para verificar duplicidade), Admin gerencia.
      */
     match /rsvps/{rsvpId} {
-      allow create: if true;
-      allow get, list, update, delete: if isAdmin();
+      allow create, list: if true;
+      allow get, update, delete: if isAdmin();
     }
 
     /**
      * @description Lista Geral de Convidados: 
-     * Público pode ler (get/list) para validar o convite no RSVP.
-     * Escrita (create/update/delete) permitida apenas para Admin.
+     * Público pode ler para validar o convite no RSVP.
      */
     match /invitees/{inviteeId} {
       allow get, list: if true;
@@ -65,7 +63,7 @@ service cloud.firestore {
      */
     match /event_settings/{settingId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     /**
@@ -73,7 +71,7 @@ service cloud.firestore {
      */
     match /manual_settings/{settingId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     /**
@@ -81,7 +79,7 @@ service cloud.firestore {
      */
     match /manual_images/{imageId} {
       allow get, list: if true;
-      allow create, update, delete: if isAdmin();
+      allow write: if isAdmin();
     }
 
     /**
@@ -89,7 +87,7 @@ service cloud.firestore {
      */
     match /roles_admin/{adminId} {
       allow get: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
-      allow list, create, update, delete: if isAdmin();
+      allow list, write: if isAdmin();
     }
   }
 }
