@@ -27,6 +27,7 @@ service cloud.firestore {
     }
 
     // --- Regra Global de Admin ---
+    // Administradores têm acesso total a qualquer documento.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -50,10 +51,13 @@ service cloud.firestore {
     }
 
     /**
-     * @description Lista Geral de Convidados: Apenas Admin.
+     * @description Lista Geral de Convidados: 
+     * Público pode ler (get/list) para validar o convite no RSVP.
+     * Escrita (create/update/delete) permitida apenas para Admin.
      */
     match /invitees/{inviteeId} {
-      allow read, write: if isAdmin();
+      allow get, list: if true;
+      allow write: if isAdmin();
     }
 
     /**
