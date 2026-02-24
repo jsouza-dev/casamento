@@ -26,7 +26,6 @@ import {
   XCircle, 
   Clock, 
   Pencil, 
-  Save, 
   Plus, 
   X 
 } from 'lucide-react';
@@ -134,17 +133,34 @@ export default function RSVPsPage() {
     }
   };
 
-  const handleEditInvitee = (invitee: any) => {
-    setEditingInvitee({ ...invitee });
-    setIsInviteeDialogOpen(true);
+  // Funções de abertura com delay para evitar conflito de foco do DropdownMenu
+  const openViewRsvp = (rsvp: any) => {
+    setTimeout(() => {
+      setSelectedRsvp(rsvp);
+    }, 100);
   };
 
-  const handleEditRsvp = (rsvp: any) => {
-    setEditingRsvp({ 
-      ...rsvp,
-      guestNames: rsvp.guestNames || [] 
-    });
-    setIsRsvpEditDialogOpen(true);
+  const openEditInvitee = (invitee: any) => {
+    setTimeout(() => {
+      setEditingInvitee({ ...invitee });
+      setIsInviteeDialogOpen(true);
+    }, 100);
+  };
+
+  const openEditRsvp = (rsvp: any) => {
+    setTimeout(() => {
+      setEditingRsvp({ 
+        ...rsvp,
+        guestNames: rsvp.guestNames || [] 
+      });
+      setIsRsvpEditDialogOpen(true);
+    }, 100);
+  };
+
+  const openDeleteConfirm = (id: string, path: 'rsvps' | 'invitees') => {
+    setTimeout(() => {
+      setDeleteConfirm({ id, path });
+    }, 100);
   };
 
   const saveInviteeChanges = () => {
@@ -324,7 +340,7 @@ export default function RSVPsPage() {
         <TabsContent value="rsvps" className="space-y-4">
           <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-primary/5 flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="relative w-full max-w-sm">
+              <div className="relative w-full max-sm:max-w-none max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10 border-primary/10" placeholder="Buscar confirmação..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
@@ -366,14 +382,14 @@ export default function RSVPsPage() {
                         </TableCell>
                         <TableCell>{rsvp.phoneNumber}</TableCell>
                         <TableCell>
-                          <DropdownMenu>
+                          <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onSelect={() => setSelectedRsvp(rsvp)}><Eye className="mr-2 h-4 w-4" /> Ver</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleEditRsvp(rsvp)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => setDeleteConfirm({ id: rsvp.id, path: 'rsvps' })} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openViewRsvp(rsvp); }}><Eye className="mr-2 h-4 w-4" /> Ver</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openEditRsvp(rsvp); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDeleteConfirm(rsvp.id, 'rsvps'); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -389,7 +405,7 @@ export default function RSVPsPage() {
         <TabsContent value="invitees" className="space-y-4">
           <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-primary/5 flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="relative w-full max-w-sm">
+              <div className="relative w-full max-sm:max-w-none max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10 border-primary/10" placeholder="Buscar na lista geral..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
@@ -431,13 +447,13 @@ export default function RSVPsPage() {
                           <TableCell>{item.guestLimit || '1'}</TableCell>
                           <TableCell><span className="text-xs text-muted-foreground bg-neutral-100 px-2 py-1 rounded">{item.category || 'Geral'}</span></TableCell>
                           <TableCell>
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleEditInvitee(item)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setDeleteConfirm({ id: item.id, path: 'invitees' })} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openEditInvitee(item); }}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); openDeleteConfirm(item.id, 'invitees'); }} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -453,7 +469,7 @@ export default function RSVPsPage() {
       </Tabs>
 
       {/* RSVP Detail Dialog */}
-      <Dialog open={!!selectedRsvp} onOpenChange={() => setSelectedRsvp(null)}>
+      <Dialog open={!!selectedRsvp} onOpenChange={(open) => !open && setSelectedRsvp(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="text-gold">Detalhes da Confirmação</DialogTitle></DialogHeader>
           {selectedRsvp && (
@@ -477,7 +493,7 @@ export default function RSVPsPage() {
       </Dialog>
 
       {/* RSVP Edit Dialog */}
-      <Dialog open={isRsvpEditDialogOpen} onOpenChange={setIsRsvpEditDialogOpen}>
+      <Dialog open={isRsvpEditDialogOpen} onOpenChange={(open) => !open && setIsRsvpEditDialogOpen(false)}>
         <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-gold">Editar Confirmação</DialogTitle></DialogHeader>
           {editingRsvp && (
@@ -508,7 +524,7 @@ export default function RSVPsPage() {
               {editingRsvp.guestNames?.map((name: string, index: number) => (
                 <div key={index} className="space-y-1">
                   <Label className="text-xs">Acompanhante {index + 1}</Label>
-                  <Input value={name} onChange={(e) => {
+                  <Input value={name || ''} onChange={(e) => {
                     const updated = [...editingRsvp.guestNames];
                     updated[index] = e.target.value;
                     setEditingRsvp({...editingRsvp, guestNames: updated});
@@ -529,7 +545,7 @@ export default function RSVPsPage() {
       </Dialog>
 
       {/* Edit Invitee Dialog */}
-      <Dialog open={isInviteeDialogOpen} onOpenChange={setIsInviteeDialogOpen}>
+      <Dialog open={isInviteeDialogOpen} onOpenChange={(open) => !open && setIsInviteeDialogOpen(false)}>
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle className="text-gold">Editar Convidado</DialogTitle></DialogHeader>
           {editingInvitee && (
@@ -537,7 +553,7 @@ export default function RSVPsPage() {
               <div className="space-y-2"><Label>Nome Completo</Label><Input value={editingInvitee.fullName || ''} onChange={(e) => setEditingInvitee({...editingInvitee, fullName: e.target.value})} /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2"><Label>Telefone</Label><Input value={editingInvitee.phoneNumber || ''} onChange={(e) => setEditingInvitee({...editingInvitee, phoneNumber: e.target.value})} /></div>
-                <div className="space-y-2"><Label>Total de Pessoas</Label><Input type="number" min="1" value={editingInvitee.guestLimit ?? 1} onChange={(e) => setEditingInvitee({...editingInvitee, guestLimit: e.target.value})} /></div>
+                <div className="space-y-2"><Label>Total de Pessoas (Limite)</Label><Input type="number" min="1" value={editingInvitee.guestLimit ?? 1} onChange={(e) => setEditingInvitee({...editingInvitee, guestLimit: e.target.value})} /></div>
               </div>
               <div className="space-y-2"><Label>Categoria</Label><Input value={editingInvitee.category || ''} onChange={(e) => setEditingInvitee({...editingInvitee, category: e.target.value})} /></div>
               <DialogFooter className="pt-4">
@@ -550,7 +566,7 @@ export default function RSVPsPage() {
       </Dialog>
 
       {/* Delete Confirmation */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => !open && setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Registro?</AlertDialogTitle>
