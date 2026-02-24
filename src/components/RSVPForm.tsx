@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CheckCircle2, UserPlus, AlertCircle, Search, Loader2, Baby, User } from 'lucide-react';
+import { CheckCircle2, UserPlus, AlertCircle, Search, Loader2, Baby, User, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -19,6 +19,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query } from 'firebase/firestore';
@@ -27,7 +34,7 @@ import { cn } from '@/lib/utils';
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   attending: z.enum(["yes", "no"], { required_error: "Por favor, selecione uma opção." }),
-  guestsCount: z.coerce.number().min(0).default(0),
+  guestsCount: z.string().default("0"),
   guestNames: z.array(z.object({
     name: z.string().min(2, { message: "Informe o nome do acompanhante." }),
     type: z.enum(["adult", "child"]).default("adult")
@@ -42,18 +49,22 @@ export function RSVPForm() {
   const [submitted, setSubmitted] = useState(false);
   const [inviteeMatch, setInviteeMatch] = useState<any>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [alreadyConfirmed, setAlreadyConfirmed] = useState(false);
   const { toast } = useToast();
   const db = useFirestore();
 
   const inviteesQuery = useMemoFirebase(() => query(collection(db, 'invitees')), [db]);
   const { data: allInvitees } = useCollection(inviteesQuery);
 
+  const rsvpsQuery = useMemoFirebase(() => query(collection(db, 'rsvps')), [db]);
+  const { data: allRsvps } = useCollection(rsvpsQuery);
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       attending: "yes",
-      guestsCount: 0,
+      guestsCount: "0",
       guestNames: [],
       phone: "",
       message: "",
@@ -65,7 +76,7 @@ export function RSVPForm() {
     name: "guestNames",
   });
 
-  const guestsCount = form.watch("guestsCount");
+  const guestsCount = parseInt(form.watch("guestsCount") || "0");
   const attending = form.watch("attending");
   const nameInput = form.watch("name");
 
@@ -90,6 +101,17 @@ export function RSVPForm() {
     setIsVerifying(true);
     const normalizedSearch = nameInput.toLowerCase().trim();
     
+    // Check if already confirmed
+    const hasConfirmed = allRsvps?.some(r => r.fullName?.toLowerCase().trim() === normalizedSearch);
+    if (hasConfirmed) {
+      setAlreadyConfirmed(true);
+      setInviteeMatch(null);
+      setIsVerifying(false);
+      return;
+    } else {
+      setAlreadyConfirmed(false);
+    }
+
     const match = allInvitees.find(inv => {
       const normalizedInDB = inv.fullName.toLowerCase().trim();
       return normalizedInDB === normalizedSearch || normalizedInDB.includes(normalizedSearch);
@@ -97,10 +119,7 @@ export function RSVPForm() {
 
     if (match) {
       setInviteeMatch(match);
-      const maxAccomp = Math.max(0, (Number(match.guestLimit) || 1) - 1);
-      if (form.getValues('guestsCount') > maxAccomp) {
-        form.setValue('guestsCount', 0);
-      }
+      form.setValue('guestsCount', "0");
     } else {
       setInviteeMatch(null);
     }
@@ -110,6 +129,15 @@ export function RSVPForm() {
   const maxAccompaniments = inviteeMatch ? Math.max(0, (Number(inviteeMatch.guestLimit) || 1) - 1) : 0;
 
   async function onSubmit(values: FormValues) {
+    if (alreadyConfirmed) {
+      toast({
+        variant: "destructive",
+        title: "Já confirmado",
+        description: "Você já realizou sua confirmação de presença anteriormente.",
+      });
+      return;
+    }
+
     if (!inviteeMatch && allInvitees && allInvitees.length > 0) {
       toast({
         variant: "destructive",
@@ -127,7 +155,7 @@ export function RSVPForm() {
         id: rsvpId,
         fullName: values.name,
         isAttending: values.attending === 'yes',
-        numberOfGuests: values.attending === 'yes' ? values.guestsCount : 0,
+        numberOfGuests: values.attending === 'yes' ? parseInt(values.guestsCount) : 0,
         guestNames: values.attending === 'yes' ? (values.guestNames || []) : [],
         phoneNumber: values.phone,
         message: values.message || "",
@@ -191,7 +219,11 @@ export function RSVPForm() {
                     </Button>
                   </div>
                 </FormControl>
-                {inviteeMatch ? (
+                {alreadyConfirmed ? (
+                  <p className="text-[10px] text-destructive flex items-center gap-1 mt-1">
+                    <Ban className="h-3 w-3" /> Presença já confirmada para este nome.
+                  </p>
+                ) : inviteeMatch ? (
                   <p className="text-[10px] text-green-600 flex items-center gap-1 mt-1">
                     <CheckCircle2 className="h-3 w-3" /> Convidado localizado. Convite para {inviteeMatch.guestLimit} pessoa(s).
                   </p>
@@ -240,17 +272,26 @@ export function RSVPForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="font-light">Levará acompanhante?</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="0" 
-                        max={maxAccompaniments} 
-                        {...field} 
-                        className="border-primary/10 focus-visible:ring-primary/20" 
-                      />
-                    </FormControl>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      defaultValue={field.value}
+                      value={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="border-primary/10 focus:ring-primary/20">
+                          <SelectValue placeholder="Selecione a quantidade" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {Array.from({ length: maxAccompaniments + 1 }, (_, i) => (
+                          <SelectItem key={i} value={i.toString()}>
+                            {i === 0 ? "Não levarei acompanhante" : `${i} acompanhante${i > 1 ? 's' : ''}`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription className="text-xs">
-                      Seu limite permite até {maxAccompaniments} acompanhante(s).
+                      Seu convite permite até {maxAccompaniments} acompanhante(s).
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -353,10 +394,10 @@ export function RSVPForm() {
 
           <Button 
             type="submit" 
-            disabled={form.formState.isSubmitting || isVerifying} 
+            disabled={form.formState.isSubmitting || isVerifying || alreadyConfirmed || !inviteeMatch} 
             className="w-full bg-gold hover:bg-gold/90 text-white font-light py-6 rounded-full transition-all"
           >
-            {form.formState.isSubmitting ? "Enviando..." : "Confirmar Presença"}
+            {form.formState.isSubmitting ? "Enviando..." : alreadyConfirmed ? "Presença já confirmada" : "Confirmar Presença"}
           </Button>
         </form>
       </Form>
