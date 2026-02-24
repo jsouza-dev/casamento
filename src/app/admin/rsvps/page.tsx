@@ -12,9 +12,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, CheckCircle, XCircle, Clock, Pencil, Save } from 'lucide-react';
+import { Download, Search, MoreHorizontal, Loader2, Users as UsersIcon, FileText, Trash2, Eye, Upload, FileUp, CheckCircle, XCircle, Clock, Pencil, Save, Plus, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { useState, useRef, useEffect } from 'react';
@@ -45,6 +47,10 @@ export default function RSVPsPage() {
   const [editingInvitee, setEditingInvitee] = useState<any>(null);
   const [isInviteeDialogOpen, setIsInviteeDialogOpen] = useState(false);
 
+  // Edit RSVP State
+  const [editingRsvp, setEditingRsvp] = useState<any>(null);
+  const [isRsvpEditDialogOpen, setIsRsvpEditDialogOpen] = useState(false);
+
   // Queries
   const rsvpsQuery = useMemoFirebase(() => query(collection(db, 'rsvps'), orderBy('createdAt', 'desc')), [db]);
   const inviteesQuery = useMemoFirebase(() => query(collection(db, 'invitees'), orderBy('fullName', 'asc')), [db]);
@@ -72,6 +78,14 @@ export default function RSVPsPage() {
     setIsInviteeDialogOpen(true);
   };
 
+  const handleEditRsvp = (rsvp: any) => {
+    setEditingRsvp({ 
+      ...rsvp,
+      guestNames: rsvp.guestNames || [] 
+    });
+    setIsRsvpEditDialogOpen(true);
+  };
+
   const saveInviteeChanges = () => {
     if (!editingInvitee) return;
     
@@ -89,6 +103,27 @@ export default function RSVPsPage() {
       description: `${editingInvitee.fullName} agora tem limite de ${editingInvitee.guestLimit} pessoas.`,
     });
     setIsInviteeDialogOpen(false);
+  };
+
+  const saveRsvpChanges = () => {
+    if (!editingRsvp) return;
+
+    const docRef = doc(db, 'rsvps', editingRsvp.id);
+    updateDocumentNonBlocking(docRef, {
+      fullName: editingRsvp.fullName,
+      isAttending: editingRsvp.isAttending,
+      numberOfGuests: Number(editingRsvp.numberOfGuests) || 0,
+      guestNames: editingRsvp.guestNames || [],
+      phoneNumber: editingRsvp.phoneNumber || "",
+      message: editingRsvp.message || "",
+      updatedAt: new Date().toISOString()
+    });
+
+    toast({
+      title: "Confirmação atualizada",
+      description: `Dados de ${editingRsvp.fullName} foram salvos.`,
+    });
+    setIsRsvpEditDialogOpen(false);
   };
 
   const processDataRows = async (rows: any[]) => {
@@ -364,7 +399,7 @@ export default function RSVPsPage() {
                     <TableRow>
                       <TableHead>Nome</TableHead>
                       <TableHead>Presença</TableHead>
-                      <TableHead>Acomp.</TableHead>
+                      <TableHead>Acompanhantes</TableHead>
                       <TableHead>Telefone</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -378,7 +413,16 @@ export default function RSVPsPage() {
                             {rsvp.isAttending ? 'Confirmado' : 'Não poderá ir'}
                           </span>
                         </TableCell>
-                        <TableCell>{rsvp.numberOfGuests}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-semibold">{rsvp.numberOfGuests || 0}</span>
+                            {rsvp.guestNames && rsvp.guestNames.length > 0 && (
+                              <span className="text-[10px] text-muted-foreground italic truncate max-w-[200px]">
+                                {rsvp.guestNames.join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>{rsvp.phoneNumber}</TableCell>
                         <TableCell>
                           <DropdownMenu>
@@ -387,6 +431,7 @@ export default function RSVPsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => setSelectedRsvp(rsvp)}><Eye className="mr-2 h-4 w-4" /> Ver</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEditRsvp(rsvp)}><Pencil className="mr-2 h-4 w-4" /> Editar</DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDelete(rsvp.id, 'rsvps')} className="text-destructive"><Trash2 className="mr-2 h-4 w-4" /> Excluir</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -490,9 +535,114 @@ export default function RSVPsPage() {
                 <span className="text-muted-foreground">Acompanhantes:</span><span>{selectedRsvp.numberOfGuests}</span>
                 <span className="text-muted-foreground">Telefone:</span><span>{selectedRsvp.phoneNumber}</span>
               </div>
+              
+              {selectedRsvp.guestNames && selectedRsvp.guestNames.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground">Nomes dos acompanhantes:</p>
+                  <ul className="list-disc list-inside text-sm font-light">
+                    {selectedRsvp.guestNames.map((name: string, i: number) => (
+                      <li key={i}>{name}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
               <div className="p-3 bg-neutral-50 rounded border italic text-sm text-muted-foreground">
                 {selectedRsvp.message || "Sem recado."}
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* RSVP Edit Dialog */}
+      <Dialog open={isRsvpEditDialogOpen} onOpenChange={setIsRsvpEditDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="text-gold">Editar Confirmação</DialogTitle></DialogHeader>
+          {editingRsvp && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Nome do Convidado Principal</Label>
+                <Input 
+                  value={editingRsvp.fullName || ''} 
+                  onChange={(e) => setEditingRsvp({...editingRsvp, fullName: e.target.value})}
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 bg-primary/5 rounded-lg border border-primary/10">
+                <Label>Vai Comparecer?</Label>
+                <Switch 
+                  checked={editingRsvp.isAttending}
+                  onCheckedChange={(val) => setEditingRsvp({...editingRsvp, isAttending: val})}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Telefone</Label>
+                  <Input 
+                    value={editingRsvp.phoneNumber || ''} 
+                    onChange={(e) => setEditingRsvp({...editingRsvp, phoneNumber: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Nº Acompanhantes</Label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    value={editingRsvp.numberOfGuests ?? 0} 
+                    onChange={(e) => {
+                      const count = parseInt(e.target.value) || 0;
+                      const currentNames = [...(editingRsvp.guestNames || [])];
+                      // Adjust array size
+                      const newNames = count > currentNames.length 
+                        ? [...currentNames, ...Array(count - currentNames.length).fill('')]
+                        : currentNames.slice(0, count);
+
+                      setEditingRsvp({...editingRsvp, numberOfGuests: count, guestNames: newNames});
+                    }}
+                  />
+                </div>
+              </div>
+
+              {editingRsvp.guestNames && editingRsvp.guestNames.length > 0 && (
+                <div className="space-y-3 pt-2">
+                  <Label className="text-gold font-semibold flex items-center gap-2">
+                    <UsersIcon className="h-4 w-4" /> Nomes dos Acompanhantes
+                  </Label>
+                  <div className="space-y-2">
+                    {editingRsvp.guestNames.map((name: string, index: number) => (
+                      <div key={index} className="flex gap-2">
+                         <Input 
+                          placeholder={`Acompanhante ${index + 1}`}
+                          value={name}
+                          onChange={(e) => {
+                            const updatedNames = [...editingRsvp.guestNames];
+                            updatedNames[index] = e.target.value;
+                            setEditingRsvp({...editingRsvp, guestNames: updatedNames});
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Mensagem/Recado</Label>
+                <Textarea 
+                  value={editingRsvp.message || ''} 
+                  onChange={(e) => setEditingRsvp({...editingRsvp, message: e.target.value})}
+                  className="min-h-[100px]"
+                />
+              </div>
+
+              <DialogFooter className="pt-4">
+                <Button variant="outline" onClick={() => setIsRsvpEditDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={saveRsvpChanges} className="bg-gold hover:bg-gold/90 text-white">
+                  <Save className="mr-2 h-4 w-4" /> Salvar Alterações
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>

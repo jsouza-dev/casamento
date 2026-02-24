@@ -70,6 +70,13 @@
           "type": "number",
           "description": "The number of additional guests accompanying the primary guest. Excludes the primary guest."
         },
+        "guestNames": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of names of the accompaniments."
+        },
         "phoneNumber": {
           "type": "string",
           "description": "Contact phone number of the guest."
