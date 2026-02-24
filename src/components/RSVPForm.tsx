@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { CheckCircle2, UserPlus, AlertCircle, Search, Loader2 } from 'lucide-react';
+import { CheckCircle2, UserPlus, AlertCircle, Search, Loader2, Baby, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -22,13 +22,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "O nome deve ter pelo menos 2 caracteres." }),
   attending: z.enum(["yes", "no"], { required_error: "Por favor, selecione uma opção." }),
   guestsCount: z.coerce.number().min(0).default(0),
   guestNames: z.array(z.object({
-    name: z.string().min(2, { message: "Informe o nome do acompanhante." })
+    name: z.string().min(2, { message: "Informe o nome do acompanhante." }),
+    type: z.enum(["adult", "child"]).default("adult")
   })).optional(),
   phone: z.string().min(10, { message: "Por favor, insira um telefone válido." }),
   message: z.string().optional(),
@@ -67,14 +69,13 @@ export function RSVPForm() {
   const attending = form.watch("attending");
   const nameInput = form.watch("name");
 
-  // Sync guest names array
   useEffect(() => {
     const currentCount = fields.length;
     const targetCount = attending === 'yes' ? guestsCount : 0;
 
     if (targetCount > currentCount) {
       for (let i = currentCount; i < targetCount; i++) {
-        append({ name: "" });
+        append({ name: "", type: "adult" });
       }
     } else if (targetCount < currentCount) {
       for (let i = currentCount; i > targetCount; i--) {
@@ -83,7 +84,6 @@ export function RSVPForm() {
     }
   }, [guestsCount, attending, fields.length, append, remove]);
 
-  // Lookup invitee on name change/blur
   const handleVerifyName = () => {
     if (!nameInput || nameInput.length < 2 || !allInvitees) return;
     
@@ -97,7 +97,6 @@ export function RSVPForm() {
 
     if (match) {
       setInviteeMatch(match);
-      // Reset guestsCount if it exceeds new limit
       const maxAccomp = Math.max(0, (Number(match.guestLimit) || 1) - 1);
       if (form.getValues('guestsCount') > maxAccomp) {
         form.setValue('guestsCount', 0);
@@ -129,14 +128,13 @@ export function RSVPForm() {
         fullName: values.name,
         isAttending: values.attending === 'yes',
         numberOfGuests: values.attending === 'yes' ? values.guestsCount : 0,
-        guestNames: values.attending === 'yes' ? (values.guestNames?.map(g => g.name) || []) : [],
+        guestNames: values.attending === 'yes' ? (values.guestNames || []) : [],
         phoneNumber: values.phone,
         message: values.message || "",
         createdAt: new Date().toISOString(),
       };
 
       setDocumentNonBlocking(docRef, rsvpData, { merge: true });
-      
       setSubmitted(true);
       toast({
         title: "Confirmação enviada!",
@@ -164,7 +162,7 @@ export function RSVPForm() {
   }
 
   return (
-    <div className="bg-white p-8 rounded-2xl border border-primary/10 shadow-sm">
+    <div className="bg-white p-6 md:p-8 rounded-2xl border border-primary/10 shadow-sm">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
@@ -220,15 +218,11 @@ export function RSVPForm() {
                     className="flex flex-col space-y-1"
                   >
                     <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="yes" />
-                      </FormControl>
+                      <FormControl><RadioGroupItem value="yes" /></FormControl>
                       <FormLabel className="font-light">Sim, estarei presente</FormLabel>
                     </FormItem>
                     <FormItem className="flex items-center space-x-3 space-y-0">
-                      <FormControl>
-                        <RadioGroupItem value="no" />
-                      </FormControl>
+                      <FormControl><RadioGroupItem value="no" /></FormControl>
                       <FormLabel className="font-light">Infelizmente não poderei ir</FormLabel>
                     </FormItem>
                   </RadioGroup>
@@ -264,28 +258,59 @@ export function RSVPForm() {
               />
 
               {fields.length > 0 && (
-                <div className="space-y-4 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-6 pt-2 animate-in fade-in slide-in-from-top-2 duration-300">
                   <p className="text-sm font-medium text-gold flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" /> Nome do Acompanhante
+                    <UserPlus className="h-4 w-4" /> Informações dos Acompanhantes
                   </p>
                   {fields.map((field, index) => (
-                    <FormField
-                      key={field.id}
-                      control={form.control}
-                      name={`guestNames.${index}.name`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input 
-                              placeholder={`Nome do acompanhante ${index + 1}`} 
-                              {...field} 
-                              className="border-primary/10 focus-visible:ring-primary/20" 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div key={field.id} className="p-4 rounded-xl border border-primary/10 bg-primary/5 space-y-4">
+                      <FormField
+                        control={form.control}
+                        name={`guestNames.${index}.name`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Nome do acompanhante {index + 1}</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Nome completo" 
+                                {...field} 
+                                className="bg-white border-primary/10 focus-visible:ring-primary/20" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name={`guestNames.${index}.type`}
+                        render={({ field }) => (
+                          <FormItem className="space-y-2">
+                            <FormControl>
+                              <RadioGroup
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                className="flex gap-4"
+                              >
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                  <FormControl><RadioGroupItem value="adult" /></FormControl>
+                                  <FormLabel className="font-light text-xs flex items-center gap-1">
+                                    <User className="h-3 w-3" /> Adulto
+                                  </FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-2 space-y-0">
+                                  <FormControl><RadioGroupItem value="child" /></FormControl>
+                                  <FormLabel className="font-light text-xs flex items-center gap-1">
+                                    <Baby className="h-3 w-3" /> Criança
+                                  </FormLabel>
+                                </FormItem>
+                              </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                   ))}
                 </div>
               )}

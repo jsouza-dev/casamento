@@ -68,14 +68,18 @@
         },
         "numberOfGuests": {
           "type": "number",
-          "description": "The number of additional guests accompanying the primary guest. Excludes the primary guest."
+          "description": "The number of additional guests accompanying the primary guest."
         },
         "guestNames": {
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "enum": ["adult", "child"] }
+            }
           },
-          "description": "List of names of the accompaniments."
+          "description": "List of names and types (adult/child) of the accompaniments."
         },
         "phoneNumber": {
           "type": "string",
@@ -141,70 +145,20 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "EventSetting",
       "type": "object",
-      "description": "Stores global configuration and details for the wedding event, such as couple's names, date, venue, and essential links.",
+      "description": "Stores global configuration and details for the wedding event.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the EventSetting entity. Expected to be a singleton (e.g., 'main_settings')."
-        },
-        "groomName": {
-          "type": "string",
-          "description": "The full name of the groom."
-        },
-        "brideName": {
-          "type": "string",
-          "description": "The full name of the bride."
-        },
-        "eventDateTime": {
-          "type": "string",
-          "description": "The full date and time of the wedding event.",
-          "format": "date-time"
-        },
-        "verseText": {
-          "type": "string",
-          "description": "The text of the wedding Bible verse."
-        },
-        "verseReference": {
-          "type": "string",
-          "description": "The reference for the wedding Bible verse (e.g., 'Salmos 126:1-2')."
-        },
-        "locationName": {
-          "type": "string",
-          "description": "The name of the wedding venue."
-        },
-        "locationAddress": {
-          "type": "string",
-          "description": "The physical address of the wedding venue."
-        },
-        "mapEmbedUrl": {
-          "type": "string",
-          "description": "The URL for embedding the Google Maps location of the venue.",
-          "format": "uri"
-        },
-        "godparentsLink": {
-          "type": "string",
-          "description": "The URL for the exclusive area for godparents.",
-          "format": "uri"
-        },
-        "backgroundMusicUrl": {
-          "type": "string",
-          "description": "The YouTube URL for the background music, embedded in the invitation.",
-          "format": "uri"
-        }
-      },
-      "required": [
-        "id",
-        "groomName",
-        "brideName",
-        "eventDateTime",
-        "verseText",
-        "verseReference",
-        "locationName",
-        "locationAddress",
-        "mapEmbedUrl",
-        "godparentsLink",
-        "backgroundMusicUrl"
-      ]
+        "id": { "type": "string" },
+        "groomName": { "type": "string" },
+        "brideName": { "type": "string" },
+        "eventDateTime": { "type": "string", "format": "date-time" },
+        "verseText": { "type": "string" },
+        "verseReference": { "type": "string" },
+        "locationName": { "type": "string" },
+        "locationAddress": { "type": "string" },
+        "mapEmbedUrl": { "type": "string", "format": "uri" },
+        "godparentsLink": { "type": "string", "format": "uri" },
+        "backgroundMusicUrl": { "type": "string", "format": "uri" }
+      }
     }
   },
   "auth": {
@@ -217,78 +171,19 @@
     "structure": [
       {
         "path": "/gifts/{giftId}",
-        "definition": {
-          "entityName": "Gift",
-          "schema": {
-            "$ref": "#/backend/entities/Gift"
-          },
-          "description": "Stores individual gift items available on the wedding registry.",
-          "params": [
-            {
-              "name": "giftId",
-              "description": "The unique identifier for a specific gift item."
-            }
-          ]
-        }
+        "definition": { "entityName": "Gift" }
       },
       {
         "path": "/rsvps/{rsvpId}",
-        "definition": {
-          "entityName": "Rsvp",
-          "schema": {
-            "$ref": "#/backend/entities/Rsvp"
-          },
-          "description": "Stores guest RSVP confirmations.",
-          "params": [
-            {
-              "name": "rsvpId",
-              "description": "The unique identifier for a specific RSVP confirmation."
-            }
-          ]
-        }
+        "definition": { "entityName": "Rsvp" }
       },
       {
         "path": "/invitees/{inviteeId}",
-        "definition": {
-          "entityName": "Invitee",
-          "schema": {
-            "$ref": "#/backend/entities/Invitee"
-          },
-          "description": "Stores the master list of invited guests.",
-          "params": [
-            {
-              "name": "inviteeId",
-              "description": "The unique identifier for an invited guest."
-            }
-          ]
-        }
+        "definition": { "entityName": "Invitee" }
       },
       {
         "path": "/event_settings/main_settings",
-        "definition": {
-          "entityName": "EventSetting",
-          "schema": {
-            "$ref": "#/backend/entities/EventSetting"
-          },
-          "description": "A singleton document storing global configuration and details for the wedding event.",
-          "params": []
-        }
-      },
-      {
-        "path": "/roles_admin/{adminId}",
-        "definition": {
-          "entityName": "admin",
-          "schema": {
-            "$ref": "#/backend/entities/user"
-          },
-          "description": "A collection used for Database Access Control (DBAC) to identify users with administrative privileges.",
-          "params": [
-            {
-              "name": "adminId",
-              "description": "The unique Firebase Authentication UID of a user granted administrative privileges."
-            }
-          ]
-        }
+        "definition": { "entityName": "EventSetting" }
       }
     ]
   }

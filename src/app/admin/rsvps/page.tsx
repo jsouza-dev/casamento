@@ -27,7 +27,9 @@ import {
   Clock, 
   Pencil, 
   Plus, 
-  X 
+  X,
+  User,
+  Baby
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -43,6 +45,7 @@ import {
 } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
   useCollection, 
   useFirestore, 
@@ -104,7 +107,6 @@ export default function RSVPsPage() {
   const { data: rsvps, isLoading: isLoadingRsvps } = useCollection(rsvpsQuery);
   const { data: invitees, isLoading: isLoadingInvitees } = useCollection(inviteesQuery);
 
-  // Memoized RSVP Map for faster lookup in invitees list
   const rsvpMap = useMemo(() => {
     const map = new Map();
     rsvps?.forEach(r => {
@@ -133,7 +135,6 @@ export default function RSVPsPage() {
     }
   };
 
-  // Funções de abertura com delay para evitar conflito de foco do DropdownMenu
   const openViewRsvp = (rsvp: any) => {
     setTimeout(() => {
       setSelectedRsvp(rsvp);
@@ -149,9 +150,13 @@ export default function RSVPsPage() {
 
   const openEditRsvp = (rsvp: any) => {
     setTimeout(() => {
+      // Normalizar guestNames para o novo formato de objeto se for string
+      const normalizedGuests = (rsvp.guestNames || []).map((g: any) => 
+        typeof g === 'string' ? { name: g, type: 'adult' } : g
+      );
       setEditingRsvp({ 
         ...rsvp,
-        guestNames: rsvp.guestNames || [] 
+        guestNames: normalizedGuests 
       });
       setIsRsvpEditDialogOpen(true);
     }, 100);
@@ -165,7 +170,6 @@ export default function RSVPsPage() {
 
   const saveInviteeChanges = () => {
     if (!editingInvitee) return;
-    
     const docRef = doc(db, 'invitees', editingInvitee.id);
     updateDocumentNonBlocking(docRef, {
       fullName: editingInvitee.fullName,
@@ -174,17 +178,12 @@ export default function RSVPsPage() {
       guestLimit: Number(editingInvitee.guestLimit) || 1,
       updatedAt: new Date().toISOString()
     });
-
-    toast({
-      title: "Convidado atualizado",
-      description: `${editingInvitee.fullName} agora tem limite de ${editingInvitee.guestLimit} pessoas.`,
-    });
     setIsInviteeDialogOpen(false);
+    toast({ title: "Convidado atualizado" });
   };
 
   const saveRsvpChanges = () => {
     if (!editingRsvp) return;
-
     const docRef = doc(db, 'rsvps', editingRsvp.id);
     updateDocumentNonBlocking(docRef, {
       fullName: editingRsvp.fullName,
@@ -195,57 +194,13 @@ export default function RSVPsPage() {
       message: editingRsvp.message || "",
       updatedAt: new Date().toISOString()
     });
-
-    toast({
-      title: "Confirmação atualizada",
-      description: `Dados de ${editingRsvp.fullName} foram salvos.`,
-    });
     setIsRsvpEditDialogOpen(false);
-  };
-
-  const processDataRows = async (rows: any[]) => {
-    const colRef = collection(db, importTarget);
-    let count = 0;
-
-    for (const row of rows) {
-      const data: any = {
-        guestLimit: 1,
-        category: 'Geral'
-      };
-      
-      Object.keys(row).forEach(key => {
-        const lowerKey = key.toLowerCase().trim();
-        const value = String(row[key]).trim();
-
-        if (lowerKey.includes('nome') || lowerKey === 'name' || lowerKey === 'fullname' || lowerKey === 'convidado') {
-          data.fullName = value;
-        } else if (lowerKey.includes('tel') || lowerKey === 'phone' || lowerKey === 'whatsapp' || lowerKey === 'celular') {
-          data.phoneNumber = value;
-        } else if (lowerKey.includes('cat') || lowerKey === 'category' || lowerKey === 'grupo') {
-          data.category = value;
-        } else if (lowerKey.includes('total') || lowerKey.includes('limite') || lowerKey === 'pessoas' || lowerKey === 'qtd') {
-          const parsed = parseInt(value);
-          if (!isNaN(parsed)) data.guestLimit = parsed;
-        }
-      });
-
-      if (data.fullName && data.fullName !== 'undefined' && data.fullName.length > 1) {
-        data.createdAt = new Date().toISOString();
-        if (importTarget === 'rsvps') {
-          data.isAttending = true;
-          data.numberOfGuests = Math.max(0, data.guestLimit - 1);
-        }
-        addDocumentNonBlocking(colRef, data);
-        count++;
-      }
-    }
-    return count;
+    toast({ title: "Confirmação atualizada" });
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     setIsImporting(true);
     const reader = new FileReader();
     const extension = file.name.split('.').pop()?.toLowerCase();
@@ -260,7 +215,6 @@ export default function RSVPsPage() {
         } else {
           const text = event.target?.result as string;
           const lines = text.split(/\r?\n/).filter(l => l.trim());
-          if (lines.length < 2) throw new Error("Arquivo vazio.");
           const delimiter = text.includes(';') ? ';' : ',';
           const headers = lines[0].split(delimiter).map(h => h.trim().replace(/"/g, ''));
           for (let i = 1; i < lines.length; i++) {
@@ -270,8 +224,34 @@ export default function RSVPsPage() {
             rows.push(row);
           }
         }
-        const count = await processDataRows(rows);
-        toast({ title: count > 0 ? "Importação concluída" : "Nenhum dado importado", description: count > 0 ? `${count} registros processados.` : "Verifique o arquivo." });
+        
+        const colRef = collection(db, importTarget);
+        let count = 0;
+        for (const row of rows) {
+          const data: any = { guestLimit: 1, category: 'Geral' };
+          Object.keys(row).forEach(key => {
+            const lowerKey = key.toLowerCase().trim();
+            const value = String(row[key]).trim();
+            if (lowerKey.includes('nome') || lowerKey === 'convidado') data.fullName = value;
+            else if (lowerKey.includes('tel') || lowerKey === 'whatsapp') data.phoneNumber = value;
+            else if (lowerKey.includes('cat') || lowerKey === 'grupo') data.category = value;
+            else if (lowerKey.includes('total') || lowerKey.includes('limite')) {
+              const parsed = parseInt(value);
+              if (!isNaN(parsed)) data.guestLimit = parsed;
+            }
+          });
+          if (data.fullName) {
+            data.createdAt = new Date().toISOString();
+            if (importTarget === 'rsvps') {
+              data.isAttending = true;
+              data.numberOfGuests = Math.max(0, data.guestLimit - 1);
+              data.guestNames = [];
+            }
+            addDocumentNonBlocking(colRef, data);
+            count++;
+          }
+        }
+        toast({ title: "Importação concluída", description: `${count} registros processados.` });
       } catch (error) {
         toast({ variant: "destructive", title: "Erro na importação" });
       } finally {
@@ -312,35 +292,29 @@ export default function RSVPsPage() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-headline text-gold">Gestão de Convidados</h1>
-          <p className="text-sm md:text-base text-muted-foreground font-light">Gerencie sua lista de convidados e acompanhe confirmações.</p>
+          <p className="text-sm md:text-base text-muted-foreground font-light">Controle total sobre a lista de convidados e confirmações.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <input type="file" accept=".csv, .xlsx, .xls" className="hidden" ref={fileInputRef} onChange={handleImportFile} />
           <Button onClick={() => { setImportTarget('invitees'); fileInputRef.current?.click(); }} variant="outline" size="sm" className="border-primary/20 text-gold flex-1 md:flex-none" disabled={isImporting}>
-            {isImporting && importTarget === 'invitees' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-            Importar Lista Geral
+            <FileUp className="mr-2 h-4 w-4" /> Importar Lista Geral
           </Button>
           <Button onClick={() => { setImportTarget('rsvps'); fileInputRef.current?.click(); }} variant="outline" size="sm" className="border-primary/20 text-gold flex-1 md:flex-none" disabled={isImporting}>
-            {isImporting && importTarget === 'rsvps' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-            Importar Confirmações
+            <Upload className="mr-2 h-4 w-4" /> Importar Confirmações
           </Button>
         </div>
       </div>
 
       <Tabs defaultValue="rsvps" className="space-y-6">
         <TabsList className="bg-primary/5 border border-primary/10">
-          <TabsTrigger value="rsvps" className="gap-2">
-            <CheckCircleIcon className="h-4 w-4" /> Confirmações ({rsvps?.length || 0})
-          </TabsTrigger>
-          <TabsTrigger value="invitees" className="gap-2">
-            <UsersIcon className="h-4 w-4" /> Lista Geral ({invitees?.length || 0})
-          </TabsTrigger>
+          <TabsTrigger value="rsvps" className="gap-2"><CheckCircle className="h-4 w-4" /> Confirmações ({rsvps?.length || 0})</TabsTrigger>
+          <TabsTrigger value="invitees" className="gap-2"><UsersIcon className="h-4 w-4" /> Lista Geral ({invitees?.length || 0})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rsvps" className="space-y-4">
           <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-primary/5 flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="relative w-full max-sm:max-w-none max-w-sm">
+              <div className="relative w-full max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10 border-primary/10" placeholder="Buscar confirmação..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
@@ -376,7 +350,18 @@ export default function RSVPsPage() {
                           <div className="flex flex-col">
                             <span className="font-semibold">{rsvp.numberOfGuests || 0}</span>
                             {rsvp.guestNames?.length > 0 && (
-                              <span className="text-[10px] text-muted-foreground italic truncate max-w-[150px]">{rsvp.guestNames.join(', ')}</span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {rsvp.guestNames.map((g: any, i: number) => {
+                                  const name = typeof g === 'string' ? g : g.name;
+                                  const type = typeof g === 'string' ? 'adult' : g.type;
+                                  return (
+                                    <span key={i} className="text-[9px] text-muted-foreground bg-neutral-100 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                      {type === 'child' ? <Baby className="h-2 w-2" /> : <User className="h-2 w-2" />}
+                                      {name}
+                                    </span>
+                                  );
+                                })}
+                              </div>
                             )}
                           </div>
                         </TableCell>
@@ -405,7 +390,7 @@ export default function RSVPsPage() {
         <TabsContent value="invitees" className="space-y-4">
           <div className="bg-white rounded-xl border border-primary/10 overflow-hidden shadow-sm">
             <div className="p-4 border-b border-primary/5 flex flex-col md:flex-row gap-4 items-center justify-between">
-              <div className="relative w-full max-sm:max-w-none max-w-sm">
+              <div className="relative w-full max-w-sm">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input className="pl-10 border-primary/10" placeholder="Buscar na lista geral..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
               </div>
@@ -481,9 +466,21 @@ export default function RSVPsPage() {
                 <span className="text-muted-foreground">Telefone:</span><span>{selectedRsvp.phoneNumber}</span>
               </div>
               {selectedRsvp.guestNames?.length > 0 && (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">Acompanhantes:</p>
-                  <ul className="list-disc list-inside font-light">{selectedRsvp.guestNames.map((n: string, i: number) => <li key={i}>{n}</li>)}</ul>
+                  <div className="space-y-1">
+                    {selectedRsvp.guestNames.map((g: any, i: number) => {
+                      const name = typeof g === 'string' ? g : g.name;
+                      const type = typeof g === 'string' ? 'adult' : g.type;
+                      return (
+                        <div key={i} className="flex items-center gap-2 p-2 bg-neutral-50 rounded border">
+                          {type === 'child' ? <Baby className="h-4 w-4 text-gold" /> : <User className="h-4 w-4 text-gold" />}
+                          <span className="flex-1">{name}</span>
+                          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{type === 'child' ? 'Criança' : 'Adulto'}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               <div className="p-3 bg-neutral-50 rounded border italic">{selectedRsvp.message || "Sem recado."}</div>
@@ -516,19 +513,35 @@ export default function RSVPsPage() {
                   <Input type="number" min="0" value={editingRsvp.numberOfGuests ?? 0} onChange={(e) => {
                     const count = parseInt(e.target.value) || 0;
                     const names = [...(editingRsvp.guestNames || [])];
-                    const newNames = count > names.length ? [...names, ...Array(count - names.length).fill('')] : names.slice(0, count);
+                    const newNames = count > names.length 
+                      ? [...names, ...Array(count - names.length).fill({ name: "", type: "adult" })] 
+                      : names.slice(0, count);
                     setEditingRsvp({...editingRsvp, numberOfGuests: count, guestNames: newNames});
                   }} />
                 </div>
               </div>
-              {editingRsvp.guestNames?.map((name: string, index: number) => (
-                <div key={index} className="space-y-1">
-                  <Label className="text-xs">Acompanhante {index + 1}</Label>
-                  <Input value={name || ''} onChange={(e) => {
-                    const updated = [...editingRsvp.guestNames];
-                    updated[index] = e.target.value;
-                    setEditingRsvp({...editingRsvp, guestNames: updated});
-                  }} />
+              {editingRsvp.guestNames?.map((g: any, index: number) => (
+                <div key={index} className="p-3 rounded-lg border bg-neutral-50 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase tracking-widest">Acompanhante {index + 1}</Label>
+                    <Input value={g.name || ''} onChange={(e) => {
+                      const updated = [...editingRsvp.guestNames];
+                      updated[index] = { ...updated[index], name: e.target.value };
+                      setEditingRsvp({...editingRsvp, guestNames: updated});
+                    }} placeholder="Nome completo" />
+                  </div>
+                  <RadioGroup 
+                    value={g.type || 'adult'} 
+                    onValueChange={(val) => {
+                      const updated = [...editingRsvp.guestNames];
+                      updated[index] = { ...updated[index], type: val };
+                      setEditingRsvp({...editingRsvp, guestNames: updated});
+                    }}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="adult" id={`adult-${index}`} /><Label htmlFor={`adult-${index}`} className="text-xs">Adulto</Label></div>
+                    <div className="flex items-center space-x-2"><RadioGroupItem value="child" id={`child-${index}`} /><Label htmlFor={`child-${index}`} className="text-xs">Criança</Label></div>
+                  </RadioGroup>
                 </div>
               ))}
               <div className="space-y-2">
@@ -579,13 +592,5 @@ export default function RSVPsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  );
-}
-
-function CheckCircleIcon(props: any) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
   );
 }
